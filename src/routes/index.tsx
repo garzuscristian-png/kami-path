@@ -178,8 +178,16 @@ function MapPage() {
                 </button>
                 <button
                   disabled={status === "locked"}
+                  onClick={() => {
+                    if (selected.id === "kyushu-kagoshima")
+                      navigate({ to: "/escenario" });
+                  }}
                   className="flex-1 rounded-sm border border-border px-3 py-2 text-sm transition-colors hover:bg-secondary disabled:opacity-40"
-                  title="Pendiente: escenario 3D (procedural o autoral) con esta semilla"
+                  title={
+                    selected.id === "kyushu-kagoshima"
+                      ? "Entrar al puerto de Kagoshima (3D)"
+                      : "Escenario pendiente: se generará con esta semilla y bioma"
+                  }
                 >
                   Entrar al escenario
                 </button>
