@@ -92,8 +92,8 @@ function ScenarioPage() {
 
         <div className="flex items-end justify-between">
           <p className="rounded-md border border-border bg-card/80 px-4 py-2 text-xs text-muted-foreground backdrop-blur">
-            Arrastra para girar la cámara · Rueda para acercar · Pulsa los restos
-            brillantes para recolectar
+            WASD o flechas para moverte · Shift para correr · Arrastra para girar
+            la cámara · Acércate a los restos brillantes para recogerlos
           </p>
           {done && (
             <div className="rounded-md border border-node-completed bg-card/90 px-5 py-4 backdrop-blur">
