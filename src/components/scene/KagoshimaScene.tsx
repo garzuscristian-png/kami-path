@@ -261,9 +261,11 @@ function AshParticles() {
 function Driftwood({
   position,
   onCollect,
+  player,
 }: {
   position: [number, number, number];
   onCollect: () => void;
+  player: PlayerHandle;
 }) {
   const ref = useRef<THREE.Group>(null);
   const [taken, setTaken] = useState(false);
@@ -273,6 +275,14 @@ function Driftwood({
     if (ref.current && !taken) {
       ref.current.position.y =
         position[1] + Math.sin(state.clock.elapsedTime * 1.6 + position[0]) * 0.06;
+      const dx = player.position.x - position[0];
+      const dz = player.position.z - position[2];
+      const near = dx * dx + dz * dz < 1.8;
+      if (near !== hover) setHover(near);
+      if (dx * dx + dz * dz < 0.9) {
+        setTaken(true);
+        onCollect();
+      }
     }
   });
 
