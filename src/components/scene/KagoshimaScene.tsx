@@ -412,13 +412,7 @@ export function KagoshimaScene({ onCollect }: { onCollect: () => void }) {
         <Driftwood key={d.id} position={d.pos} onCollect={onCollect} player={player} />
       ))}
 
-      <OrbitControls
-        target={[0, 1, -2]}
-        maxPolarAngle={Math.PI / 2.1}
-        minDistance={4}
-        maxDistance={30}
-        enablePan={false}
-      />
+      <FollowCamera player={player} />
     </>
   );
 }
