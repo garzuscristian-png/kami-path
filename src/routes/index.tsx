@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { MapView } from "@/components/game/MapView";
 import { MAP_NODES, NODES_BY_ID, type MapNode } from "@/lib/game/nodes";
