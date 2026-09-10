@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { MapView } from "@/components/game/MapView";
 import { MAP_NODES, NODES_BY_ID, type MapNode } from "@/lib/game/nodes";
@@ -39,6 +39,7 @@ const STATUS_LABEL = {
 
 function MapPage() {
   const { state, hydrated, advanceObjective, completeNode, resetProgress } = useProgress();
+  const navigate = useNavigate();
   const [selectedId, setSelectedId] = useState<string | null>("kyushu-kagoshima");
 
   const selected: MapNode | null = selectedId ? (NODES_BY_ID[selectedId] ?? null) : null;
@@ -177,8 +178,16 @@ function MapPage() {
                 </button>
                 <button
                   disabled={status === "locked"}
+                  onClick={() => {
+                    if (selected.id === "kyushu-kagoshima")
+                      navigate({ to: "/escenario" });
+                  }}
                   className="flex-1 rounded-sm border border-border px-3 py-2 text-sm transition-colors hover:bg-secondary disabled:opacity-40"
-                  title="Pendiente: escenario 3D (procedural o autoral) con esta semilla"
+                  title={
+                    selected.id === "kyushu-kagoshima"
+                      ? "Entrar al puerto de Kagoshima (3D)"
+                      : "Escenario pendiente: se generará con esta semilla y bioma"
+                  }
                 >
                   Entrar al escenario
                 </button>

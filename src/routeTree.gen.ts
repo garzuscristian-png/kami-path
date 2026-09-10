@@ -10,11 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as EscenarioRouteImport } from './routes/escenario'
 import { Route as HabilidadesRouteImport } from './routes/habilidades'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EscenarioRoute = EscenarioRouteImport.update({
+  id: '/escenario',
+  path: '/escenario',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HabilidadesRoute = HabilidadesRouteImport.update({
@@ -25,27 +31,31 @@ const HabilidadesRoute = HabilidadesRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/escenario': typeof EscenarioRoute
   '/habilidades': typeof HabilidadesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/escenario': typeof EscenarioRoute
   '/habilidades': typeof HabilidadesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/escenario': typeof EscenarioRoute
   '/habilidades': typeof HabilidadesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/habilidades'
+  fullPaths: '/' | '/escenario' | '/habilidades'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/habilidades'
-  id: '__root__' | '/' | '/habilidades'
+  to: '/' | '/escenario' | '/habilidades'
+  id: '__root__' | '/' | '/escenario' | '/habilidades'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  EscenarioRoute: typeof EscenarioRoute
   HabilidadesRoute: typeof HabilidadesRoute
 }
 
@@ -56,6 +66,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/escenario': {
+      id: '/escenario'
+      path: '/escenario'
+      fullPath: '/escenario'
+      preLoaderRoute: typeof EscenarioRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/habilidades': {
@@ -70,6 +87,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  EscenarioRoute: EscenarioRoute,
   HabilidadesRoute: HabilidadesRoute,
 }
 export const routeTree = rootRouteImport

@@ -22,7 +22,7 @@ function Ground({ sand }: { sand: THREE.Texture }) {
   return (
     <mesh rotation-x={-Math.PI / 2} position={[0, -0.02, 6]} receiveShadow>
       <planeGeometry args={[60, 60]} />
-      <meshStandardMaterial map={sand} roughness={1} color="#8a8378" />
+      <meshStandardMaterial map={sand} roughness={1} color="#c9c0af" />
     </mesh>
   );
 }
@@ -177,16 +177,18 @@ function Volcano() {
   useFrame((_, delta) => {
     const pts = smokeRef.current;
     if (!pts) return;
-    const arr = pts.geometry.attributes.position.array as Float32Array;
+    const attr = pts.geometry.attributes["position"];
+    if (!attr) return;
+    const arr = attr.array as Float32Array;
     for (let i = 0; i < arr.length; i += 3) {
-      arr[i + 1] += delta * 0.5;
-      arr[i] += delta * 0.35;
-      if (arr[i + 1] > 32) {
+      arr[i + 1]! += delta * 0.5;
+      arr[i]! += delta * 0.35;
+      if (arr[i + 1]! > 32) {
         arr[i + 1] = 14;
         arr[i] = (Math.random() - 0.5) * 6;
       }
     }
-    pts.geometry.attributes.position.needsUpdate = true;
+    attr.needsUpdate = true;
   });
 
   return (
@@ -227,15 +229,17 @@ function AshParticles() {
   useFrame((state, delta) => {
     const pts = ref.current;
     if (!pts) return;
+    const attr = pts.geometry.attributes["position"];
+    if (!attr) return;
     const dt = Math.min(delta, 0.05);
     const t = state.clock.elapsedTime;
-    const arr = pts.geometry.attributes.position.array as Float32Array;
+    const arr = attr.array as Float32Array;
     for (let i = 0; i < arr.length; i += 3) {
-      arr[i + 1] -= dt * 0.5;
-      arr[i] += Math.sin(t * 0.4 + i) * dt * 0.25;
-      if (arr[i + 1] < -0.5) arr[i + 1] = 18;
+      arr[i + 1]! -= dt * 0.5;
+      arr[i]! += Math.sin(t * 0.4 + i) * dt * 0.25;
+      if (arr[i + 1]! < -0.5) arr[i + 1] = 18;
     }
-    pts.geometry.attributes.position.needsUpdate = true;
+    attr.needsUpdate = true;
   });
 
   return (
@@ -335,14 +339,14 @@ export function KagoshimaScene({ onCollect }: { onCollect: () => void }) {
 
   return (
     <>
-      <color attach="background" args={["#3a3b42"]} />
-      <fog attach="fog" args={["#3f3f46", 18, 70]} />
+      <color attach="background" args={["#5a5c68"]} />
+      <fog attach="fog" args={["#5a5c68", 20, 75]} />
 
-      <hemisphereLight args={["#8e93a0", "#3a332c", 0.7]} />
+      <hemisphereLight args={["#aab0c0", "#4a4238", 1.15]} />
       <directionalLight
         position={[12, 10, -6]}
-        intensity={2.2}
-        color="#ffb27a"
+        intensity={3.2}
+        color="#ffc18f"
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
