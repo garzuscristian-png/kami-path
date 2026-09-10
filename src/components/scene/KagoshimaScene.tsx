@@ -22,7 +22,7 @@ function Ground({ sand }: { sand: THREE.Texture }) {
   return (
     <mesh rotation-x={-Math.PI / 2} position={[0, -0.02, 6]} receiveShadow>
       <planeGeometry args={[60, 60]} />
-      <meshStandardMaterial map={sand} roughness={1} color="#8a8378" />
+      <meshStandardMaterial map={sand} roughness={1} color="#c9c0af" />
     </mesh>
   );
 }
@@ -339,14 +339,14 @@ export function KagoshimaScene({ onCollect }: { onCollect: () => void }) {
 
   return (
     <>
-      <color attach="background" args={["#3a3b42"]} />
-      <fog attach="fog" args={["#3f3f46", 18, 70]} />
+      <color attach="background" args={["#5a5c68"]} />
+      <fog attach="fog" args={["#5a5c68", 20, 75]} />
 
-      <hemisphereLight args={["#8e93a0", "#3a332c", 0.7]} />
+      <hemisphereLight args={["#aab0c0", "#4a4238", 1.15]} />
       <directionalLight
         position={[12, 10, -6]}
-        intensity={2.2}
-        color="#ffb27a"
+        intensity={3.2}
+        color="#ffc18f"
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
