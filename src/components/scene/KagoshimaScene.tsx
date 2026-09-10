@@ -406,9 +406,10 @@ export function KagoshimaScene({ onCollect }: { onCollect: () => void }) {
       <Torii />
       <Volcano />
       <AshParticles />
+      <Player handle={player} />
 
       {drifts.map((d) => (
-        <Driftwood key={d.id} position={d.pos} onCollect={onCollect} />
+        <Driftwood key={d.id} position={d.pos} onCollect={onCollect} player={player} />
       ))}
 
       <OrbitControls
