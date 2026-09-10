@@ -39,6 +39,7 @@ const STATUS_LABEL = {
 
 function MapPage() {
   const { state, hydrated, advanceObjective, completeNode, resetProgress } = useProgress();
+  const navigate = useNavigate();
   const [selectedId, setSelectedId] = useState<string | null>("kyushu-kagoshima");
 
   const selected: MapNode | null = selectedId ? (NODES_BY_ID[selectedId] ?? null) : null;
