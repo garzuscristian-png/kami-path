@@ -227,15 +227,17 @@ function AshParticles() {
   useFrame((state, delta) => {
     const pts = ref.current;
     if (!pts) return;
+    const attr = pts.geometry.attributes["position"];
+    if (!attr) return;
     const dt = Math.min(delta, 0.05);
     const t = state.clock.elapsedTime;
-    const arr = pts.geometry.attributes.position.array as Float32Array;
+    const arr = attr.array as Float32Array;
     for (let i = 0; i < arr.length; i += 3) {
-      arr[i + 1] -= dt * 0.5;
-      arr[i] += Math.sin(t * 0.4 + i) * dt * 0.25;
-      if (arr[i + 1] < -0.5) arr[i + 1] = 18;
+      arr[i + 1]! -= dt * 0.5;
+      arr[i]! += Math.sin(t * 0.4 + i) * dt * 0.25;
+      if (arr[i + 1]! < -0.5) arr[i + 1] = 18;
     }
-    pts.geometry.attributes.position.needsUpdate = true;
+    attr.needsUpdate = true;
   });
 
   return (
