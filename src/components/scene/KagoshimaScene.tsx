@@ -177,16 +177,18 @@ function Volcano() {
   useFrame((_, delta) => {
     const pts = smokeRef.current;
     if (!pts) return;
-    const arr = pts.geometry.attributes.position.array as Float32Array;
+    const attr = pts.geometry.attributes["position"];
+    if (!attr) return;
+    const arr = attr.array as Float32Array;
     for (let i = 0; i < arr.length; i += 3) {
-      arr[i + 1] += delta * 0.5;
-      arr[i] += delta * 0.35;
-      if (arr[i + 1] > 32) {
+      arr[i + 1]! += delta * 0.5;
+      arr[i]! += delta * 0.35;
+      if (arr[i + 1]! > 32) {
         arr[i + 1] = 14;
         arr[i] = (Math.random() - 0.5) * 6;
       }
     }
-    pts.geometry.attributes.position.needsUpdate = true;
+    attr.needsUpdate = true;
   });
 
   return (
