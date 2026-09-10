@@ -2,6 +2,7 @@ import { Environment, Lightformer, OrbitControls, MeshReflectorMaterial } from "
 import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef, useState } from "react";
 import * as THREE from "three";
+import { Player, type PlayerHandle } from "./Player";
 import {
   createAshSandTexture,
   createStoneTexture,
@@ -261,9 +262,11 @@ function AshParticles() {
 function Driftwood({
   position,
   onCollect,
+  player,
 }: {
   position: [number, number, number];
   onCollect: () => void;
+  player: PlayerHandle;
 }) {
   const ref = useRef<THREE.Group>(null);
   const [taken, setTaken] = useState(false);
@@ -273,6 +276,14 @@ function Driftwood({
     if (ref.current && !taken) {
       ref.current.position.y =
         position[1] + Math.sin(state.clock.elapsedTime * 1.6 + position[0]) * 0.06;
+      const dx = player.position.x - position[0];
+      const dz = player.position.z - position[2];
+      const near = dx * dx + dz * dz < 1.8;
+      if (near !== hover) setHover(near);
+      if (dx * dx + dz * dz < 0.9) {
+        setTaken(true);
+        onCollect();
+      }
     }
   });
 
@@ -317,7 +328,30 @@ function Driftwood({
   );
 }
 
+function FollowCamera({ player }: { player: PlayerHandle }) {
+  const ref = useRef<any>(null);
+  useFrame(() => {
+    const c = ref.current;
+    if (!c) return;
+    c.target.lerp(
+      new THREE.Vector3(player.position.x, player.position.y + 1.2, player.position.z),
+      0.15,
+    );
+    c.update();
+  });
+  return (
+    <OrbitControls
+      ref={ref}
+      maxPolarAngle={Math.PI / 2.1}
+      minDistance={3}
+      maxDistance={14}
+      enablePan={false}
+    />
+  );
+}
+
 export function KagoshimaScene({ onCollect }: { onCollect: () => void }) {
+  const player = useMemo<PlayerHandle>(() => ({ position: new THREE.Vector3(0, 0, 3) }), []);
   const sand = useMemo(() => createAshSandTexture(), []);
   const wood = useMemo(() => createWoodTexture(), []);
   const stone = useMemo(() => createStoneTexture(), []);
@@ -373,18 +407,13 @@ export function KagoshimaScene({ onCollect }: { onCollect: () => void }) {
       <Torii />
       <Volcano />
       <AshParticles />
+      <Player handle={player} />
 
       {drifts.map((d) => (
-        <Driftwood key={d.id} position={d.pos} onCollect={onCollect} />
+        <Driftwood key={d.id} position={d.pos} onCollect={onCollect} player={player} />
       ))}
 
-      <OrbitControls
-        target={[0, 1, -2]}
-        maxPolarAngle={Math.PI / 2.1}
-        minDistance={4}
-        maxDistance={30}
-        enablePan={false}
-      />
+      <FollowCamera player={player} />
     </>
   );
 }
