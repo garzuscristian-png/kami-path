@@ -2,6 +2,7 @@ import { Environment, Lightformer, OrbitControls, MeshReflectorMaterial } from "
 import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef, useState } from "react";
 import * as THREE from "three";
+import { Player, type PlayerHandle } from "./Player";
 import {
   createAshSandTexture,
   createStoneTexture,
