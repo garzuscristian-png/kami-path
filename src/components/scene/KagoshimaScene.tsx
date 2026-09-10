@@ -327,7 +327,30 @@ function Driftwood({
   );
 }
 
+function FollowCamera({ player }: { player: PlayerHandle }) {
+  const ref = useRef<any>(null);
+  useFrame(() => {
+    const c = ref.current;
+    if (!c) return;
+    c.target.lerp(
+      new THREE.Vector3(player.position.x, player.position.y + 1.2, player.position.z),
+      0.15,
+    );
+    c.update();
+  });
+  return (
+    <OrbitControls
+      ref={ref}
+      maxPolarAngle={Math.PI / 2.1}
+      minDistance={3}
+      maxDistance={14}
+      enablePan={false}
+    />
+  );
+}
+
 export function KagoshimaScene({ onCollect }: { onCollect: () => void }) {
+  const player = useMemo<PlayerHandle>(() => ({ position: new THREE.Vector3(0, 0, 3) }), []);
   const sand = useMemo(() => createAshSandTexture(), []);
   const wood = useMemo(() => createWoodTexture(), []);
   const stone = useMemo(() => createStoneTexture(), []);
