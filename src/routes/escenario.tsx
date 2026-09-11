@@ -89,6 +89,15 @@ function ScenarioPage() {
                 style={{ width: `${(collected / TARGET) * 100}%` }}
               />
             </div>
+            <p className="mt-3 text-xs uppercase tracking-widest text-muted-foreground">
+              Salud
+            </p>
+            <div className="mt-1 h-1.5 w-56 rounded-full bg-secondary">
+              <div
+                className="h-1.5 rounded-full bg-destructive transition-all"
+                style={{ width: `${health}%` }}
+              />
+            </div>
           </div>
           <button
             onClick={() => navigate({ to: "/" })}
