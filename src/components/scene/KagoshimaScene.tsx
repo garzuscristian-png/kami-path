@@ -360,7 +360,47 @@ function FollowCamera({ player }: { player: PlayerHandle }) {
   );
 }
 
-export function KagoshimaScene({ onCollect }: { onCollect: () => void }) {
+/** Islas y cordilleras lejanas para que el horizonte no quede vacío. */
+function Horizon() {
+  const islands = useMemo(() => {
+    const r = rng(555);
+    return Array.from({ length: 16 }, () => {
+      const a = r() * Math.PI * 2;
+      const d = 95 + r() * 60;
+      return {
+        pos: [Math.cos(a) * d, SEA_LEVEL - 1, Math.sin(a) * d] as [number, number, number],
+        radius: 12 + r() * 30,
+        height: 8 + r() * 26,
+        seg: 5 + Math.floor(r() * 4),
+        rot: r() * Math.PI,
+        tint: 0.32 + r() * 0.16,
+      };
+    });
+  }, []);
+
+  return (
+    <group>
+      {islands.map((is, i) => (
+        <mesh key={i} position={is.pos} rotation-y={is.rot}>
+          <coneGeometry args={[is.radius, is.height, is.seg]} />
+          <meshStandardMaterial
+            color={new THREE.Color(is.tint * 0.9, is.tint * 0.95, is.tint * 1.15)}
+            roughness={1}
+            fog
+          />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+export function KagoshimaScene({
+  onCollect,
+  onHit,
+}: {
+  onCollect: () => void;
+  onHit: () => void;
+}) {
   const player = useMemo<PlayerHandle>(() => ({ position: new THREE.Vector3(0, 0, 3) }), []);
   const sand = useMemo(() => createAshSandTexture(), []);
   const wood = useMemo(() => createWoodTexture(), []);
