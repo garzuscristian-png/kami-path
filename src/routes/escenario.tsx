@@ -30,6 +30,14 @@ const TARGET = 12;
 function ScenarioPage() {
   const [collected, setCollected] = useState(0);
   const [night, setNight] = useState(false);
+  const [health, setHealth] = useState(100);
+  const [hurt, setHurt] = useState(false);
+
+  const onHit = useCallback(() => {
+    setHealth((h) => Math.max(0, h - 15));
+    setHurt(true);
+    window.setTimeout(() => setHurt(false), 350);
+  }, []);
   const { advanceObjective } = useProgress();
   const navigate = useNavigate();
 
