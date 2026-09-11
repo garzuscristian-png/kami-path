@@ -1,8 +1,18 @@
-import { Environment, Lightformer, OrbitControls, MeshReflectorMaterial } from "@react-three/drei";
+import {
+  Cloud,
+  Clouds,
+  Environment,
+  Lightformer,
+  MeshReflectorMaterial,
+  OrbitControls,
+  Sky,
+  Stars,
+} from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { Player, type PlayerHandle } from "./Player";
+import { Zombie, type ZombieSpawn } from "./Zombie";
 import {
   createAshSandTexture,
   createStoneTexture,
