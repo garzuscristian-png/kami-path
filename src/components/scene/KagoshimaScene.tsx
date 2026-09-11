@@ -492,6 +492,10 @@ export function KagoshimaScene({
       <AshParticles />
       <Player handle={player} />
 
+      {zombies.map((z) => (
+        <Zombie key={z.id} spawn={z} player={player} onCatch={onHit} />
+      ))}
+
       {drifts.map((d) => (
         <Driftwood key={d.id} position={d.pos} onCollect={onCollect} player={player} />
       ))}
