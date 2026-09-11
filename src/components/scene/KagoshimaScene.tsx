@@ -18,6 +18,8 @@ import {
   createStoneTexture,
   createWoodTexture,
 } from "./textures";
+import { createTerrainGeometry, heightAt } from "./terrain";
+import { Trees } from "./Trees";
 
 const SEA_LEVEL = -0.35;
 
