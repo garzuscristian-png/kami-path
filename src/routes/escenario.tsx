@@ -134,6 +134,27 @@ function ScenarioPage() {
       {night && (
         <div className="pointer-events-none absolute inset-0 z-[5] bg-background/45" />
       )}
+
+      {hurt && (
+        <div className="pointer-events-none absolute inset-0 z-[6] bg-destructive/25" />
+      )}
+
+      {health === 0 && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/80">
+          <div className="rounded-md border border-border bg-card px-8 py-6 text-center">
+            <p className="text-xl font-semibold text-destructive">Te han alcanzado</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Los zombis del puerto acabaron contigo.
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 rounded-sm bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+            >
+              Reintentar
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
