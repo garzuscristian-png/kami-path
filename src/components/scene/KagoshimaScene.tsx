@@ -421,10 +421,43 @@ export function KagoshimaScene({
     });
   }, []);
 
+  const zombies = useMemo<ZombieSpawn[]>(() => {
+    const r = rng(3131);
+    return Array.from({ length: 6 }, (_, i) => ({
+      id: i,
+      origin: [(r() - 0.5) * 26, 0, 4 + r() * 16] as [number, number, number],
+      seed: r() * 6.28,
+    }));
+  }, []);
+
   return (
     <>
       <color attach="background" args={["#5a5c68"]} />
-      <fog attach="fog" args={["#5a5c68", 20, 75]} />
+      <fog attach="fog" args={["#6a6c76", 30, 190]} />
+      <Sky
+        distance={4500}
+        sunPosition={[24, 6, -60]}
+        turbidity={9}
+        rayleigh={2.4}
+        mieCoefficient={0.02}
+        mieDirectionalG={0.85}
+        inclination={0.49}
+        azimuth={0.25}
+      />
+      <Stars radius={300} depth={60} count={900} factor={5} fade speed={0.4} />
+      <Clouds material={THREE.MeshBasicMaterial} limit={200}>
+        <Cloud
+          seed={7}
+          bounds={[90, 8, 40]}
+          volume={26}
+          segments={26}
+          position={[0, 26, -70]}
+          color="#c9bdb3"
+          opacity={0.5}
+          speed={0.08}
+        />
+      </Clouds>
+      <Horizon />
 
       <hemisphereLight args={["#aab0c0", "#4a4238", 1.15]} />
       <directionalLight
