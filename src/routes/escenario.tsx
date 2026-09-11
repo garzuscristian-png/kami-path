@@ -110,7 +110,7 @@ function ScenarioPage() {
         <div className="flex items-end justify-between">
           <p className="rounded-md border border-border bg-card/80 px-4 py-2 text-xs text-muted-foreground backdrop-blur">
             WASD o flechas para moverte · Shift para correr · Arrastra para girar
-            la cámara · Acércate a los restos brillantes para recogerlos
+            la cámara · Recoge los restos brillantes y huye de los zombis
           </p>
           {done && (
             <div className="rounded-md border border-node-completed bg-card/90 px-5 py-4 backdrop-blur">
