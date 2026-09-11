@@ -459,7 +459,7 @@ export function KagoshimaScene({
       </Clouds>
       <Horizon />
 
-      <hemisphereLight args={["#aab0c0", "#4a4238", 1.15]} />
+      <hemisphereLight args={["#bcc4d4", "#5a5348", 2.1]} />
       <directionalLight
         position={[12, 10, -6]}
         intensity={3.2}
