@@ -423,22 +423,24 @@ export function KagoshimaScene({
     const r = rng(2024);
     return Array.from({ length: 12 }, (_, i) => {
       const onDock = i % 3 === 0;
+      const x = onDock ? (r() - 0.5) * 3 : (r() - 0.5) * 34;
+      const z = onDock ? -2 - r() * 10 : 1 + r() * 20;
       return {
         id: i,
-        pos: [
-          onDock ? (r() - 0.5) * 3 : (r() - 0.5) * 16,
-          onDock ? 0.6 : 0.18,
-          onDock ? -2 - r() * 10 : 1 + r() * 9,
-        ] as [number, number, number],
+        pos: [x, onDock ? 0.6 : heightAt(x, z) + 0.18, z] as [
+          number,
+          number,
+          number,
+        ],
       };
     });
   }, []);
 
   const zombies = useMemo<ZombieSpawn[]>(() => {
     const r = rng(3131);
-    return Array.from({ length: 6 }, (_, i) => ({
+    return Array.from({ length: 8 }, (_, i) => ({
       id: i,
-      origin: [(r() - 0.5) * 26, 0, 4 + r() * 16] as [number, number, number],
+      origin: [(r() - 0.5) * 44, 0, 4 + r() * 22] as [number, number, number],
       seed: r() * 6.28,
     }));
   }, []);
@@ -496,7 +498,8 @@ export function KagoshimaScene({
         />
       </Environment>
 
-      <Ground sand={sand} />
+      <Terrain sand={sand} />
+      <Trees />
       <Sea />
       <Dock wood={wood} />
       <Crates wood={wood} stone={stone} />
