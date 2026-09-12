@@ -38,7 +38,7 @@ function Terrain({ sand }: { sand: THREE.Texture }) {
       <meshStandardMaterial
         map={sand}
         roughness={1}
-        color="#c9c0af"
+        color="#ece3d0"
         vertexColors
       />
     </mesh>
