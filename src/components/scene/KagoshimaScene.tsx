@@ -31,11 +31,16 @@ function rng(seed: number) {
   };
 }
 
-function Ground({ sand }: { sand: THREE.Texture }) {
+function Terrain({ sand }: { sand: THREE.Texture }) {
+  const geometry = useMemo(() => createTerrainGeometry(), []);
   return (
-    <mesh rotation-x={-Math.PI / 2} position={[0, -0.02, 6]} receiveShadow>
-      <planeGeometry args={[60, 60]} />
-      <meshStandardMaterial map={sand} roughness={1} color="#c9c0af" />
+    <mesh geometry={geometry} position={[0, -0.02, 6]} receiveShadow>
+      <meshStandardMaterial
+        map={sand}
+        roughness={1}
+        color="#c9c0af"
+        vertexColors
+      />
     </mesh>
   );
 }
@@ -283,19 +288,27 @@ function Driftwood({
   const ref = useRef<THREE.Group>(null);
   const [taken, setTaken] = useState(false);
   const [hover, setHover] = useState(false);
+  const collected = useRef(false);
+
+  const collect = () => {
+    if (collected.current) return; // evita doble cobro por proximidad + clic
+    collected.current = true;
+    setTaken(true);
+    document.body.style.cursor = "auto";
+    onCollect();
+  };
 
   useFrame((state) => {
-    if (ref.current && !taken) {
+    if (ref.current && !collected.current) {
       ref.current.position.y =
         position[1] + Math.sin(state.clock.elapsedTime * 1.6 + position[0]) * 0.06;
       const dx = player.position.x - position[0];
       const dz = player.position.z - position[2];
-      const near = dx * dx + dz * dz < 1.8;
+      const d2 = dx * dx + dz * dz;
+      const near = d2 < 2.6;
       if (near !== hover) setHover(near);
-      if (dx * dx + dz * dz < 0.9) {
-        setTaken(true);
-        onCollect();
-      }
+      // radio generoso para que nunca se quede atascado sin recogerse
+      if (d2 < 2.25) collect();
     }
   });
 
