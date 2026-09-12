@@ -47,8 +47,8 @@ function Terrain({ sand }: { sand: THREE.Texture }) {
 
 function Sea() {
   return (
-    <mesh rotation-x={-Math.PI / 2} position={[0, SEA_LEVEL, -16]}>
-      <planeGeometry args={[160, 120]} />
+    <mesh rotation-x={-Math.PI / 2} position={[0, SEA_LEVEL, -60]}>
+      <planeGeometry args={[320, 240]} />
       <MeshReflectorMaterial
         resolution={512}
         mixBlur={1}
@@ -329,9 +329,7 @@ function Driftwood({
       }}
       onClick={(e) => {
         e.stopPropagation();
-        setTaken(true);
-        document.body.style.cursor = "auto";
-        onCollect();
+        collect();
       }}
     >
       <mesh rotation={[0.2, 0.6, 1.4]} castShadow>
