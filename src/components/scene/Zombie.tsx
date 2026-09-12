@@ -100,7 +100,9 @@ export function Zombie({
     if (legR.current) legR.current.rotation.x = -swing;
     if (armL.current) armL.current.rotation.x = -1.2 + swing * 0.2;
     if (armR.current) armR.current.rotation.x = -1.1 - swing * 0.2;
-    g.position.y = Math.abs(Math.sin(phase.current)) * 0.04 * (moveSpeed > 0.1 ? 1 : 0.2);
+    g.position.y =
+      Math.max(heightAt(g.position.x, g.position.z), 0) +
+      Math.abs(Math.sin(phase.current)) * 0.04 * (moveSpeed > 0.1 ? 1 : 0.2);
     if (eyes.current) {
       eyes.current.emissiveIntensity = chasing.current ? 2.6 : 0.5;
     }

@@ -34,7 +34,7 @@ function rng(seed: number) {
 function Terrain({ sand }: { sand: THREE.Texture }) {
   const geometry = useMemo(() => createTerrainGeometry(), []);
   return (
-    <mesh geometry={geometry} position={[0, -0.02, 6]} receiveShadow>
+    <mesh geometry={geometry} position={[0, -0.02, 0]} receiveShadow>
       <meshStandardMaterial
         map={sand}
         roughness={1}

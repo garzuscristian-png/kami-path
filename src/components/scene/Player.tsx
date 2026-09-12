@@ -87,12 +87,12 @@ export function Player({ handle }: { handle: PlayerHandle }) {
 
     g.position.x += vel.current.x * dt;
     g.position.z += vel.current.z * dt;
-    g.position.x = THREE.MathUtils.clamp(g.position.x, -22, 22);
-    g.position.z = THREE.MathUtils.clamp(g.position.z, -14, 24);
+    g.position.x = THREE.MathUtils.clamp(g.position.x, -62, 62);
+    g.position.z = THREE.MathUtils.clamp(g.position.z, -13.5, 62);
 
-    // altura: sobre el muelle o en la arena
+    // altura: sobre el muelle o siguiendo el terreno
     const onDock = Math.abs(g.position.x) < 2.1 && g.position.z < -0.6;
-    const targetY = onDock ? 0.48 : 0;
+    const targetY = onDock ? 0.48 : Math.max(heightAt(g.position.x, g.position.z), 0);
     g.position.y += (targetY - g.position.y) * Math.min(1, 10 * dt);
 
     const speed = Math.hypot(vel.current.x, vel.current.z);
