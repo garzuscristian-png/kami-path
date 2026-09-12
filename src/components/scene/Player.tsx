@@ -1,6 +1,7 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
+import { heightAt } from "./terrain";
 
 const SPEED = 4.2;
 const ACCEL = 14;

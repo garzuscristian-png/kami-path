@@ -2,6 +2,7 @@ import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { PlayerHandle } from "./Player";
+import { heightAt } from "./terrain";
 
 const DETECT = 14;
 const LOSE = 20;
