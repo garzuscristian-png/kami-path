@@ -440,11 +440,17 @@ export function KagoshimaScene({
 
   const zombies = useMemo<ZombieSpawn[]>(() => {
     const r = rng(3131);
-    return Array.from({ length: 8 }, (_, i) => ({
-      id: i,
-      origin: [(r() - 0.5) * 44, 0, 4 + r() * 22] as [number, number, number],
-      seed: r() * 6.28,
-    }));
+    const out: ZombieSpawn[] = [];
+    let guard = 0;
+    while (out.length < 10 && guard < 400) {
+      guard++;
+      const x = (r() - 0.5) * 80;
+      const z = 2 + r() * 48;
+      // nunca aparecen encima del jugador (inicio en 0,3)
+      if (Math.hypot(x, z - 3) < 22) continue;
+      out.push({ id: out.length, origin: [x, 0, z], seed: r() * 6.28 });
+    }
+    return out;
   }, []);
 
   return (
