@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Canvas } from "@react-three/fiber";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { KagoshimaScene } from "@/components/scene/KagoshimaScene";
+import type { LootKind } from "@/components/scene/Loot";
 import { useProgress } from "@/lib/game/progress";
 
 export const Route = createFileRoute("/escenario")({
@@ -32,6 +33,17 @@ function ScenarioPage() {
   const [night, setNight] = useState(false);
   const [health, setHealth] = useState(100);
   const [hurt, setHurt] = useState(false);
+  const [loot, setLoot] = useState<Record<LootKind, number>>({
+    comida: 0,
+    medicina: 0,
+    chatarra: 0,
+    reliquia: 0,
+  });
+
+  const onLoot = useCallback((kind: LootKind) => {
+    setLoot((l) => ({ ...l, [kind]: l[kind] + 1 }));
+    if (kind === "medicina") setHealth((h) => Math.min(100, h + 10));
+  }, []);
 
   const onHit = useCallback(() => {
     setHealth((h) => Math.max(0, h - 15));
