@@ -111,12 +111,6 @@ function Minka({ data, mats }: { data: HouseData; mats: Record<string, THREE.Mat
       <mesh position={[w / 2 - 0.2, 0.33 + h * 0.85, d / 2 + 0.35]} material={mats["lantern"]!}>
         <sphereGeometry args={[0.2, 10, 8]} />
       </mesh>
-      <pointLight
-        position={[w / 2 - 0.2, 0.33 + h * 0.85, d / 2 + 0.35]}
-        distance={6}
-        intensity={2.2}
-        color="#ffb765"
-      />
     </group>
   );
 }
@@ -225,7 +219,14 @@ function TempleGrounds({ mats }: { mats: Record<string, THREE.Material> }) {
           <mesh position={[0, 1.25, 0]} castShadow material={mats["stone"]!}>
             <coneGeometry args={[0.45, 0.35, 4]} />
           </mesh>
-          <pointLight position={[0, 0.9, 0]} distance={5} intensity={1.4} color="#ffcf95" />
+          <mesh position={[0, 0.9, 0]}>
+            <boxGeometry args={[0.52, 0.3, 0.52]} />
+            <meshStandardMaterial
+              color="#ffcf95"
+              emissive={new THREE.Color("#ffa94d")}
+              emissiveIntensity={1.4}
+            />
+          </mesh>
         </group>
       ))}
     </group>
