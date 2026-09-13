@@ -343,12 +343,9 @@ function Driftwood({
           roughness={0.9}
         />
       </mesh>
-      <pointLight
-        distance={2.4}
-        intensity={hover ? 3 : 1.2}
-        color="#e0a860"
-        position={[0, 0.2, 0]}
-      />
+      {hover && (
+        <pointLight distance={2.6} intensity={3} color="#e0a860" position={[0, 0.2, 0]} />
+      )}
     </group>
   );
 }
