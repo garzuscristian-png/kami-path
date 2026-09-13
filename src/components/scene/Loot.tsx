@@ -135,12 +135,9 @@ export function LootItem({
           metalness={0.25}
         />
       </mesh>
-      <pointLight
-        distance={3}
-        intensity={near ? 3 : 1.3}
-        color={color}
-        position={[0, 0.25, 0]}
-      />
+      {near && (
+        <pointLight distance={3.5} intensity={3} color={color} position={[0, 0.25, 0]} />
+      )}
     </group>
   );
 }
