@@ -412,10 +412,13 @@ function Horizon() {
 export function KagoshimaScene({
   onCollect,
   onHit,
+  onLoot,
 }: {
   onCollect: () => void;
   onHit: () => void;
+  onLoot: (kind: LootKind) => void;
 }) {
+  const loot = useLootSpawns();
   const player = useMemo<PlayerHandle>(() => ({ position: new THREE.Vector3(0, 0, 3) }), []);
   const sand = useMemo(() => createAshSandTexture(), []);
   const wood = useMemo(() => createWoodTexture(), []);
