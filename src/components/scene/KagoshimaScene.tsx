@@ -505,6 +505,7 @@ export function KagoshimaScene({
 
       <Terrain sand={sand} />
       <Trees />
+      <Village />
       <Sea />
       <Dock wood={wood} />
       <Crates wood={wood} stone={stone} />
@@ -519,6 +520,10 @@ export function KagoshimaScene({
 
       {drifts.map((d) => (
         <Driftwood key={d.id} position={d.pos} onCollect={onCollect} player={player} />
+      ))}
+
+      {loot.map((l) => (
+        <LootItem key={l.id} spawn={l} player={player} onLoot={onLoot} />
       ))}
 
       <FollowCamera player={player} />
