@@ -81,7 +81,7 @@ function ScenarioPage() {
         camera={{ position: [8, 6, 12], fov: 55, near: 0.1, far: 4000 }}
       >
         <Suspense fallback={null}>
-          <KagoshimaScene onCollect={onCollect} onHit={onHit} />
+          <KagoshimaScene onCollect={onCollect} onHit={onHit} onLoot={onLoot} />
         </Suspense>
       </Canvas>
 
@@ -110,6 +110,15 @@ function ScenarioPage() {
                 style={{ width: `${health}%` }}
               />
             </div>
+            <p className="mt-3 text-xs uppercase tracking-widest text-muted-foreground">
+              Botín de aldeas y templo
+            </p>
+            <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-foreground">
+              <span>Comida: {loot.comida}</span>
+              <span>Medicina: {loot.medicina}</span>
+              <span>Chatarra: {loot.chatarra}</span>
+              <span>Reliquias: {loot.reliquia}</span>
+            </div>
           </div>
           <button
             onClick={() => navigate({ to: "/" })}
@@ -122,7 +131,8 @@ function ScenarioPage() {
         <div className="flex items-end justify-between">
           <p className="rounded-md border border-border bg-card/80 px-4 py-2 text-xs text-muted-foreground backdrop-blur">
             WASD o flechas para moverte · Shift para correr · Arrastra para girar
-            la cámara · Recoge los restos brillantes y huye de los zombis
+            la cámara · Saquea la aldea, las granjas y el templo · Las medicinas
+            curan · Huye de los zombis
           </p>
           {done && (
             <div className="rounded-md border border-node-completed bg-card/90 px-5 py-4 backdrop-blur">
