@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import * as THREE from "three";
 import { heightAt } from "./terrain";
+import { ZONES } from "./Village";
 
 function rng(seed: number) {
   let s = seed >>> 0;
@@ -31,6 +32,14 @@ export function Trees({ count = 130 }: { count?: number }) {
       // fuera de la playa jugable y del muelle
       const d = Math.hypot(x, z - 4);
       if (d < 20) continue;
+      // deja libres las zonas habitadas (aldea, templo, granjas)
+      if (
+        ZONES.some(
+          (zone) =>
+            Math.hypot(x - zone.center[0], z - zone.center[2]) < zone.radius + 3,
+        )
+      )
+        continue;
       const y = heightAt(x, z);
       if (y < 0.4) continue; // nada dentro del agua
       out.push({
