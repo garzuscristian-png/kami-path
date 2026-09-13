@@ -140,6 +140,10 @@ function TempleGrounds({ mats }: { mats: Record<string, THREE.Material> }) {
 
   return (
     <group>
+      {/* zócalo enterrado para que el recinto no flote sobre la ladera */}
+      <mesh position={[cx, base - 5, cz]} receiveShadow material={mats["stone"]!}>
+        <boxGeometry args={[17.4, 11, 15.4]} />
+      </mesh>
       {/* plataforma del recinto */}
       <mesh position={[cx, base + 0.45, cz]} receiveShadow material={mats["stone"]!}>
         <boxGeometry args={[18, 0.9, 16]} />
