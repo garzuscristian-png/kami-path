@@ -7,4 +7,5 @@
 - [x] Cielo e islas lejanas en el horizonte
 - [x] Enemigos zombis que detectan y persiguen al jugador
 - [x] Terreno 3D ampliado con curvas de nivel, árboles y farmeo de troncos sin atascos (verificado)
+- [x] Zonas con casas japonesas y templo para lootear (aldea, granjas, recinto del templo)
 - [ ] Decidir y construir generación procedural de escenarios (pendiente del usuario)

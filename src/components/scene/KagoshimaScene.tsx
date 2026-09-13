@@ -20,6 +20,8 @@ import {
 } from "./textures";
 import { createTerrainGeometry, heightAt } from "./terrain";
 import { Trees } from "./Trees";
+import { Village } from "./Village";
+import { LootItem, useLootSpawns, type LootKind } from "./Loot";
 
 const SEA_LEVEL = -0.35;
 
@@ -341,12 +343,9 @@ function Driftwood({
           roughness={0.9}
         />
       </mesh>
-      <pointLight
-        distance={2.4}
-        intensity={hover ? 3 : 1.2}
-        color="#e0a860"
-        position={[0, 0.2, 0]}
-      />
+      {hover && (
+        <pointLight distance={2.6} intensity={3} color="#e0a860" position={[0, 0.2, 0]} />
+      )}
     </group>
   );
 }
@@ -410,10 +409,13 @@ function Horizon() {
 export function KagoshimaScene({
   onCollect,
   onHit,
+  onLoot,
 }: {
   onCollect: () => void;
   onHit: () => void;
+  onLoot: (kind: LootKind) => void;
 }) {
+  const loot = useLootSpawns();
   const player = useMemo<PlayerHandle>(() => ({ position: new THREE.Vector3(0, 0, 3) }), []);
   const sand = useMemo(() => createAshSandTexture(), []);
   const wood = useMemo(() => createWoodTexture(), []);
@@ -438,11 +440,17 @@ export function KagoshimaScene({
 
   const zombies = useMemo<ZombieSpawn[]>(() => {
     const r = rng(3131);
-    return Array.from({ length: 8 }, (_, i) => ({
-      id: i,
-      origin: [(r() - 0.5) * 44, 0, 4 + r() * 22] as [number, number, number],
-      seed: r() * 6.28,
-    }));
+    const out: ZombieSpawn[] = [];
+    let guard = 0;
+    while (out.length < 10 && guard < 400) {
+      guard++;
+      const x = (r() - 0.5) * 80;
+      const z = 2 + r() * 48;
+      // nunca aparecen encima del jugador (inicio en 0,3)
+      if (Math.hypot(x, z - 3) < 22) continue;
+      out.push({ id: out.length, origin: [x, 0, z], seed: r() * 6.28 });
+    }
+    return out;
   }, []);
 
   return (
@@ -500,6 +508,7 @@ export function KagoshimaScene({
 
       <Terrain sand={sand} />
       <Trees />
+      <Village />
       <Sea />
       <Dock wood={wood} />
       <Crates wood={wood} stone={stone} />
@@ -514,6 +523,10 @@ export function KagoshimaScene({
 
       {drifts.map((d) => (
         <Driftwood key={d.id} position={d.pos} onCollect={onCollect} player={player} />
+      ))}
+
+      {loot.map((l) => (
+        <LootItem key={l.id} spawn={l} player={player} onLoot={onLoot} />
       ))}
 
       <FollowCamera player={player} />
