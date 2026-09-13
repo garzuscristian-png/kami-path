@@ -20,6 +20,8 @@ import {
 } from "./textures";
 import { createTerrainGeometry, heightAt } from "./terrain";
 import { Trees } from "./Trees";
+import { Village } from "./Village";
+import { LootItem, useLootSpawns, type LootKind } from "./Loot";
 
 const SEA_LEVEL = -0.35;
 
