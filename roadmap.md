@@ -1,11 +1,30 @@
 # Roadmap
 
-- [x] Mapa de nodos conectados (progresión por objetivos)
-- [x] Árbol de habilidades vinculado a la exploración
+- [x] Mapa de nodos conectados (progresión por objetivos en el archipiélago de Japón)
+- [x] Árbol de habilidades vinculado a la exploración (supervivencia, combate, exploración)
 - [x] Primer escenario 3D: Puerto de Kagoshima (demo visual, verificado)
 - [x] Personaje jugable en 3D con movimiento WASD y cámara que lo sigue
 - [x] Cielo e islas lejanas en el horizonte
 - [x] Enemigos zombis que detectan y persiguen al jugador
 - [x] Terreno 3D ampliado con curvas de nivel, árboles y farmeo de troncos sin atascos (verificado)
 - [x] Zonas con casas japonesas y templo para lootear (aldea, granjas, recinto del templo)
-- [ ] Decidir y construir generación procedural de escenarios (pendiente del usuario)
+- [x] Sistema de combate Melee con Katana:
+  - Katana visible en mano derecha con animación procedural de tajo.
+  - Efecto visual de estela de corte (Slash Trail FX).
+  - Detección de impacto frontal, retroceso (knockback), daño y eliminación de zombis.
+- [x] Sistema de supervivencia y aguante (Stamina):
+  - Consumo de estamina al esprintar con Shift y atacar con Katana.
+  - Consumo de comida recolectada (tecla C) para recuperar salud y energía.
+- [x] Sistema de Crafteo en tiempo real (tecla Tab):
+  - Fabricación de vendajes rápidos, raciones Bento, afilado Tamahagane (+1 daño) y amuleto Omamori (-40% daño).
+- [x] Audio procedural inmersivo (Web Audio API):
+  - Tajos de katana, impactos a zombis, gruñidos, pasos y campanillas pentatónicas al recolectar botín.
+- [x] Conexión activa del árbol de habilidades y minimapa Radar:
+  - Cartografía activa radar con orientación y puntos de interés (aldea, templo, muelle).
+  - Esgrima otorga daño adicional.
+  - Forrajeo costero otorga 25% de probabilidad de botín duplicado.
+- [x] Escenarios adaptados por bioma para todos los nodos del archipiélago:
+  - Cada nodo desbloqueado del mapa ahora abre su propio escenario con su atmósfera, iluminación, cielo, niebla y partículas (volcánico, nieve, bosque kami, lluvia urbana, etc.).
+- [ ] Próximos pasos opcionales:
+  - Generación de ruinas urbanas densas y nuevos tipos de enemigos mutados (fauna, jabalíes, jefes de zona).
+  - Sistema de ciclo día/noche continuo y guardado en la nube.

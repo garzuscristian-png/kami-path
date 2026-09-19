@@ -38,7 +38,14 @@ const STATUS_LABEL = {
 } as const;
 
 function MapPage() {
-  const { state, hydrated, advanceObjective, completeNode, resetProgress } = useProgress();
+  const {
+    state,
+    hydrated,
+    advanceObjective,
+    completeNode,
+    unlockAndCompleteAll,
+    resetProgress,
+  } = useProgress();
   const navigate = useNavigate();
   const [selectedId, setSelectedId] = useState<string | null>("kyushu-kagoshima");
 
@@ -63,7 +70,7 @@ function MapPage() {
             Progresión por nodos conectados — survival 3D en Japón
           </p>
         </div>
-        <div className="flex items-center gap-4 text-sm">
+        <div className="flex items-center gap-3 text-sm">
           <span className="text-muted-foreground">
             Zonas {completedCount}/{MAP_NODES.length}
           </span>
@@ -76,6 +83,13 @@ function MapPage() {
           >
             Árbol de habilidades
           </Link>
+          <button
+            onClick={unlockAndCompleteAll}
+            className="rounded-sm border border-primary/50 bg-primary/20 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
+            title="Desbloquear y completar todas las zonas para obtener todos los puntos de habilidad"
+          >
+            ⚡ Desbloquear todo (+Puntos)
+          </button>
           <button
             onClick={resetProgress}
             className="rounded-sm border border-border px-3 py-1.5 text-muted-foreground transition-colors hover:text-foreground"
@@ -179,15 +193,13 @@ function MapPage() {
                 <button
                   disabled={status === "locked"}
                   onClick={() => {
-                    if (selected.id === "kyushu-kagoshima")
-                      navigate({ to: "/escenario" });
+                    navigate({
+                      to: "/escenario",
+                      search: { nodeId: selected.id },
+                    });
                   }}
                   className="flex-1 rounded-sm border border-border px-3 py-2 text-sm transition-colors hover:bg-secondary disabled:opacity-40"
-                  title={
-                    selected.id === "kyushu-kagoshima"
-                      ? "Entrar al puerto de Kagoshima (3D)"
-                      : "Escenario pendiente: se generará con esta semilla y bioma"
-                  }
+                  title={`Entrar al escenario 3D de ${selected.name} (${selected.biome})`}
                 >
                   Entrar al escenario
                 </button>

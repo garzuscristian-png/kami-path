@@ -22,6 +22,8 @@ import { createTerrainGeometry, heightAt } from "./terrain";
 import { Trees } from "./Trees";
 import { Village } from "./Village";
 import { LootItem, useLootSpawns, type LootKind } from "./Loot";
+import { BIOME_THEMES } from "@/lib/game/biomes";
+import type { Biome } from "@/lib/game/nodes";
 
 const SEA_LEVEL = -0.35;
 
@@ -33,14 +35,14 @@ function rng(seed: number) {
   };
 }
 
-function Terrain({ sand }: { sand: THREE.Texture }) {
+function Terrain({ sand, color = "#ece3d0" }: { sand: THREE.Texture; color?: string }) {
   const geometry = useMemo(() => createTerrainGeometry(), []);
   return (
     <mesh geometry={geometry} position={[0, -0.02, 0]} receiveShadow>
       <meshStandardMaterial
         map={sand}
         roughness={1}
-        color="#ece3d0"
+        color={color}
         vertexColors
       />
     </mesh>
@@ -233,7 +235,15 @@ function Volcano() {
   );
 }
 
-function AshParticles() {
+function BiomeParticles({
+  color = "#cfc7ba",
+  size = 0.07,
+  speedY = -0.5,
+}: {
+  color?: string;
+  size?: number;
+  speedY?: number;
+}) {
   const ref = useRef<THREE.Points>(null);
   const positions = useMemo(() => {
     const r = rng(42);
@@ -255,9 +265,10 @@ function AshParticles() {
     const t = state.clock.elapsedTime;
     const arr = attr.array as Float32Array;
     for (let i = 0; i < arr.length; i += 3) {
-      arr[i + 1]! -= dt * 0.5;
+      arr[i + 1]! += dt * speedY;
       arr[i]! += Math.sin(t * 0.4 + i) * dt * 0.25;
-      if (arr[i + 1]! < -0.5) arr[i + 1] = 18;
+      if (speedY < 0 && arr[i + 1]! < -0.5) arr[i + 1] = 18;
+      else if (speedY > 0 && arr[i + 1]! > 18) arr[i + 1] = -0.5;
     }
     attr.needsUpdate = true;
   });
@@ -268,10 +279,10 @@ function AshParticles() {
         <bufferAttribute attach="attributes-position" args={[positions, 3]} />
       </bufferGeometry>
       <pointsMaterial
-        size={0.07}
-        color="#cfc7ba"
+        size={size}
+        color={color}
         transparent
-        opacity={0.55}
+        opacity={0.65}
         depthWrite={false}
       />
     </points>
@@ -407,16 +418,35 @@ function Horizon() {
 }
 
 export function KagoshimaScene({
+  biome = "coast",
   onCollect,
   onHit,
   onLoot,
+  onKillZombie,
+  onStaminaChange,
+  onPlayerMove,
+  damagePerHit = 1,
 }: {
+  biome?: Biome;
   onCollect: () => void;
   onHit: () => void;
   onLoot: (kind: LootKind) => void;
+  onKillZombie?: (id: number) => void;
+  onStaminaChange?: (stamina: number) => void;
+  onPlayerMove?: (x: number, z: number, angle: number) => void;
+  damagePerHit?: number;
 }) {
+  const theme = BIOME_THEMES[biome] ?? BIOME_THEMES.coast;
   const loot = useLootSpawns();
-  const player = useMemo<PlayerHandle>(() => ({ position: new THREE.Vector3(0, 0, 3) }), []);
+  const player = useMemo<PlayerHandle>(
+    () => ({
+      position: new THREE.Vector3(0, 0, 3),
+      rotationY: 0,
+      isAttacking: false,
+      attackId: 0,
+    }),
+    [],
+  );
   const sand = useMemo(() => createAshSandTexture(), []);
   const wood = useMemo(() => createWoodTexture(), []);
   const stone = useMemo(() => createStoneTexture(), []);
@@ -455,13 +485,13 @@ export function KagoshimaScene({
 
   return (
     <>
-      <color attach="background" args={["#5a5c68"]} />
-      <fog attach="fog" args={["#6a6c76", 30, 190]} />
+      <color attach="background" args={[theme.background]} />
+      <fog attach="fog" args={[theme.fogColor, theme.fogNear, theme.fogFar]} />
       <Sky
         distance={4500}
-        sunPosition={[24, 6, -60]}
-        turbidity={9}
-        rayleigh={2.4}
+        sunPosition={theme.skySun}
+        turbidity={theme.skyTurbidity}
+        rayleigh={theme.skyRayleigh}
         mieCoefficient={0.02}
         mieDirectionalG={0.85}
         inclination={0.49}
@@ -482,11 +512,11 @@ export function KagoshimaScene({
       </Clouds>
       <Horizon />
 
-      <hemisphereLight args={["#bcc4d4", "#5a5348", 2.1]} />
+      <hemisphereLight args={[theme.hemiSky, theme.hemiGround, 2.1]} />
       <directionalLight
         position={[12, 10, -6]}
-        intensity={3.2}
-        color="#ffc18f"
+        intensity={theme.dirLightIntensity}
+        color={theme.dirLightColor}
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
@@ -506,7 +536,7 @@ export function KagoshimaScene({
         />
       </Environment>
 
-      <Terrain sand={sand} />
+      <Terrain sand={sand} color={theme.groundColor} />
       <Trees />
       <Village />
       <Sea />
@@ -514,11 +544,26 @@ export function KagoshimaScene({
       <Crates wood={wood} stone={stone} />
       <Torii />
       <Volcano />
-      <AshParticles />
-      <Player handle={player} />
+      <BiomeParticles
+        color={theme.particleColor}
+        size={theme.particleSize}
+        speedY={theme.particleSpeedY}
+      />
+      <Player
+        handle={player}
+        onStaminaChange={onStaminaChange}
+        onPlayerMove={onPlayerMove}
+      />
 
       {zombies.map((z) => (
-        <Zombie key={z.id} spawn={z} player={player} onCatch={onHit} />
+        <Zombie
+          key={z.id}
+          spawn={z}
+          player={player}
+          damagePerHit={damagePerHit}
+          onCatch={onHit}
+          onKill={onKillZombie}
+        />
       ))}
 
       {drifts.map((d) => (

@@ -34,11 +34,7 @@ export function isNodeCompleted(state: ProgressState, node: MapNode) {
 }
 
 export function nodeStatus(state: ProgressState, node: MapNode): NodeStatus {
-  const unlocked = node.requires.every((r) => {
-    const req = NODES_BY_ID[r];
-    return req ? isNodeCompleted(state, req) : false;
-  });
-  if (!unlocked) return "locked";
+  // Todas las zonas desbloqueadas para pruebas
   if (isNodeCompleted(state, node)) return "completed";
   const started = node.objectives.some(
     (o) => getObjectiveValue(state, node.id, o.id) > 0,
@@ -140,6 +136,18 @@ export function useProgress() {
     });
   }, []);
 
+  const unlockAndCompleteAll = useCallback(() => {
+    setState((prev) => {
+      const objectiveProgress: Record<string, number> = {};
+      for (const n of MAP_NODES) {
+        for (const o of n.objectives) {
+          objectiveProgress[objectiveKey(n.id, o.id)] = o.target;
+        }
+      }
+      return { ...prev, objectiveProgress };
+    });
+  }, []);
+
   const resetProgress = useCallback(() => setState(EMPTY), []);
 
   return {
@@ -147,6 +155,7 @@ export function useProgress() {
     hydrated,
     advanceObjective,
     completeNode,
+    unlockAndCompleteAll,
     learnSkill,
     resetProgress,
     nodes: MAP_NODES,
