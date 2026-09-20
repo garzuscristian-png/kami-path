@@ -1,7 +1,8 @@
-import { useFrame, useThree } from "@react-three/fiber";
+﻿import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { heightAt } from "./terrain";
+import { resolveCollisions } from "./Collisions";
 import { sound } from "@/lib/game/audio";
 
 const SPEED = 4.2;
@@ -18,14 +19,18 @@ export interface PlayerHandle {
 
 interface PlayerProps {
   handle: PlayerHandle;
+  defenses?: { x: number; z: number; kind: string }[];
+  shelterLevel?: number;
   onAttack?: () => void;
   onStaminaChange?: (stamina: number) => void;
   onPlayerMove?: (x: number, z: number, angle: number) => void;
 }
 
-/** Personaje estilizado low-poly con katana y animación procedural de caminata y ataque. */
+/** Personaje estilizado low-poly con katana, animaciones y resolución de colisiones sólidas. */
 export function Player({
   handle,
+  defenses = [],
+  shelterLevel = 0,
   onAttack,
   onStaminaChange,
   onPlayerMove,
@@ -64,8 +69,8 @@ export function Player({
   );
 
   const triggerAttack = () => {
-    if (attackTimer.current > 0) return; // cooldown en curso
-    if (stamina.current < 12) return; // sin estamina
+    if (attackTimer.current > 0) return;
+    if (stamina.current < 12) return;
 
     stamina.current = Math.max(0, stamina.current - 12);
     attackTimer.current = ATTACK_DURATION;
@@ -95,7 +100,6 @@ export function Player({
 
     const handlePointerDown = (e: MouseEvent) => {
       if (e.button === 0) {
-        // Clic izquierdo para atacar
         triggerAttack();
       }
     };
@@ -123,7 +127,6 @@ export function Player({
       (k["KeyD"] || k["ArrowRight"] ? 1 : 0) -
       (k["KeyA"] || k["ArrowLeft"] ? 1 : 0);
 
-    // Dirección relativa a la cámara
     const camDir = new THREE.Vector3();
     camera.getWorldDirection(camDir);
     camDir.y = 0;
@@ -138,7 +141,6 @@ export function Player({
     const moving = wish.lengthSq() > 0.0001;
     if (moving) wish.normalize();
 
-    // Gestión de sprint y estamina
     const wantsRun = (k["ShiftLeft"] || k["ShiftRight"]) && moving;
     const canRun = wantsRun && stamina.current > 5;
     const run = canRun ? 1.7 : 1;
@@ -164,10 +166,19 @@ export function Player({
       vel.current.z *= d;
     }
 
-    g.position.x += vel.current.x * dt;
-    g.position.z += vel.current.z * dt;
-    g.position.x = THREE.MathUtils.clamp(g.position.x, -62, 62);
-    g.position.z = THREE.MathUtils.clamp(g.position.z, -13.5, 62);
+    // Comprobación y resolución de colisiones sólidas con el entorno y barricadas
+    const nextX = g.position.x + vel.current.x * dt;
+    const nextZ = g.position.z + vel.current.z * dt;
+    const [resolvedX, resolvedZ] = resolveCollisions(
+      nextX,
+      nextZ,
+      0.45,
+      defenses,
+      shelterLevel,
+    );
+
+    g.position.x = resolvedX;
+    g.position.z = resolvedZ;
 
     // Altura del terreno
     const onDock = Math.abs(g.position.x) < 2.1 && g.position.z < -0.6;
@@ -191,19 +202,17 @@ export function Player({
     if (legR.current) legR.current.rotation.x = -swing;
     if (armL.current) armL.current.rotation.x = -swing * 0.8;
 
-    // Animación de ataque o balanceo de brazo derecho
+    // Animación de ataque con katana
     if (attackTimer.current > 0) {
       attackTimer.current -= dt;
       const t = 1 - Math.max(0, attackTimer.current / ATTACK_DURATION);
       if (armR.current) {
         armR.current.rotation.x = -1.6 + Math.sin(t * Math.PI) * 2.4;
         armR.current.rotation.y = 0.6 - Math.sin(t * Math.PI) * 1.6;
-        armR.current.rotation.z = -0.4 + Math.cos(t * Math.PI) * 0.8;
-      }
-      if (attackTimer.current <= 0) {
-        setIsAttackingMesh(false);
+        armR.current.rotation.z = Math.sin(t * Math.PI) * 0.8;
       }
     } else {
+      if (isAttackingMesh) setIsAttackingMesh(false);
       if (armR.current) {
         armR.current.rotation.x = swing * 0.8;
         armR.current.rotation.y = 0;
@@ -211,119 +220,82 @@ export function Player({
       }
     }
 
-    g.position.y += Math.sin(phase.current * 2) * 0.012 * Math.min(1, speed);
-
-    // Sincronizar estado con el handle externo
     handle.position.copy(g.position);
     handle.rotationY = g.rotation.y;
     handle.isAttacking = attackTimer.current > 0;
     handle.attackId = attackId.current;
 
-    if (onPlayerMove && speed > 0.04) {
-      onPlayerMove(g.position.x, g.position.z, g.rotation.y);
-    }
+    onPlayerMove?.(g.position.x, g.position.z, g.rotation.y);
   });
 
   return (
     <group ref={group} position={[0, 0, 3]}>
+      {/* Sombra proyectada */}
+      <mesh
+        rotation-x={-Math.PI / 2}
+        position={[0, 0.03, 0]}
+        material={new THREE.MeshBasicMaterial({ color: "#000000", transparent: true, opacity: 0.35 })}
+      >
+        <circleGeometry args={[0.38, 16]} />
+      </mesh>
+
       {/* Piernas */}
-      <mesh ref={legL} position={[-0.16, 0.52, 0]} castShadow material={cloth}>
-        <capsuleGeometry args={[0.11, 0.42, 4, 8]} />
+      <mesh ref={legL} position={[-0.14, 0.45, 0]} castShadow material={cloth}>
+        <capsuleGeometry args={[0.08, 0.45, 4, 6]} />
       </mesh>
-      <mesh ref={legR} position={[0.16, 0.52, 0]} castShadow material={cloth}>
-        <capsuleGeometry args={[0.11, 0.42, 4, 8]} />
-      </mesh>
-
-      {/* Torso con abrigo tradicional */}
-      <mesh position={[0, 1.12, 0]} castShadow material={coat}>
-        <capsuleGeometry args={[0.26, 0.44, 4, 10]} />
+      <mesh ref={legR} position={[0.14, 0.45, 0]} castShadow material={cloth}>
+        <capsuleGeometry args={[0.08, 0.45, 4, 6]} />
       </mesh>
 
-      {/* Mochila de viajero */}
-      <mesh position={[0, 1.12, -0.28]} castShadow>
-        <boxGeometry args={[0.36, 0.44, 0.22]} />
-        <meshStandardMaterial color="#5b4736" roughness={0.9} />
+      {/* Torso y Haori rojo */}
+      <mesh position={[0, 1.0, 0]} castShadow material={coat}>
+        <boxGeometry args={[0.42, 0.6, 0.28]} />
+      </mesh>
+      {/* Fajín Obi */}
+      <mesh position={[0, 0.85, 0]} material={cloth}>
+        <boxGeometry args={[0.44, 0.12, 0.3]} />
+      </mesh>
+
+      {/* Cabeza */}
+      <mesh position={[0, 1.45, 0]} castShadow material={skin}>
+        <sphereGeometry args={[0.15, 10, 8]} />
+      </mesh>
+
+      {/* Cinta de samurái en la frente */}
+      <mesh position={[0, 1.5, 0]}>
+        <cylinderGeometry args={[0.155, 0.155, 0.05, 12]} />
+        <meshStandardMaterial color="#f8fafc" />
       </mesh>
 
       {/* Brazo izquierdo */}
-      <mesh ref={armL} position={[-0.36, 1.2, 0]} castShadow material={coat}>
-        <capsuleGeometry args={[0.08, 0.38, 4, 8]} />
+      <mesh ref={armL} position={[-0.28, 1.0, 0]} castShadow material={coat}>
+        <capsuleGeometry args={[0.065, 0.4, 4, 6]} />
       </mesh>
 
-      {/* Brazo derecho con KATANA */}
-      <group ref={armR} position={[0.36, 1.2, 0]}>
-        <mesh position={[0, -0.18, 0]} castShadow material={coat}>
-          <capsuleGeometry args={[0.08, 0.38, 4, 8]} />
+      {/* Brazo derecho con Katana */}
+      <group ref={armR} position={[0.28, 1.1, 0]}>
+        <mesh position={[0, -0.2, 0]} castShadow material={coat}>
+          <capsuleGeometry args={[0.065, 0.4, 4, 6]} />
         </mesh>
-
-        {/* Katana en la mano */}
-        <group position={[0, -0.36, 0.1]} rotation={[0.4, 0, -0.15]}>
-          {/* Empuñadura (Tsuka) */}
-          <mesh position={[0, -0.1, 0]} castShadow>
-            <cylinderGeometry args={[0.024, 0.024, 0.22, 8]} />
-            <meshStandardMaterial color="#1a1c20" roughness={0.8} />
-          </mesh>
-          {/* Guarda dorada (Tsuba) */}
-          <mesh position={[0, 0.012, 0]} castShadow>
-            <cylinderGeometry args={[0.065, 0.065, 0.015, 12]} />
-            <meshStandardMaterial
-              color="#d4a34b"
-              metalness={0.85}
-              roughness={0.3}
-            />
-          </mesh>
-          {/* Hoja metálica (Ha) */}
-          <mesh position={[0, 0.46, 0]} castShadow>
-            <boxGeometry args={[0.016, 0.9, 0.05]} />
-            <meshStandardMaterial
-              color="#e6ebf2"
-              metalness={0.95}
-              roughness={0.15}
-            />
-          </mesh>
-          {/* Filo reflectante con emisión sutil */}
-          <mesh position={[0, 0.46, 0.026]}>
-            <boxGeometry args={[0.005, 0.88, 0.005]} />
-            <meshStandardMaterial
-              color="#ffffff"
-              emissive="#ffffff"
-              emissiveIntensity={0.3}
-            />
-          </mesh>
-
-          {/* Efecto visual de arco de tajo (Slash FX) al golpear */}
-          {isAttackingMesh && (
-            <mesh position={[0, 0.45, 0.35]} rotation={[0, Math.PI / 2, 0]}>
-              <ringGeometry args={[0.25, 0.85, 16, 1, 0, Math.PI * 0.85]} />
-              <meshBasicMaterial
-                color="#ffe5cc"
-                transparent
-                opacity={0.8}
-                side={THREE.DoubleSide}
-              />
-            </mesh>
-          )}
-        </group>
+        {/* Katana de combate */}
+        <mesh
+          position={[0, -0.38, 0.35]}
+          rotation-x={Math.PI / 2}
+          castShadow
+        >
+          <boxGeometry args={[0.04, 0.85, 0.015]} />
+          <meshStandardMaterial
+            color="#e2e8f0"
+            metalness={0.9}
+            roughness={0.2}
+          />
+        </mesh>
+        {/* Tsuba (guarda de la espada) */}
+        <mesh position={[0, -0.38, 0.0]}>
+          <cylinderGeometry args={[0.07, 0.07, 0.02, 8]} rotation-x={Math.PI / 2} />
+          <meshStandardMaterial color="#b45309" metalness={0.8} />
+        </mesh>
       </group>
-
-      {/* Cabeza */}
-      <mesh position={[0, 1.6, 0]} castShadow material={skin}>
-        <sphereGeometry args={[0.19, 16, 14]} />
-      </mesh>
-
-      {/* Sombrero / Capucha tradicional (Kasa) */}
-      <mesh position={[0, 1.74, 0]} castShadow>
-        <coneGeometry args={[0.42, 0.16, 16]} />
-        <meshStandardMaterial color="#6e573f" roughness={0.95} />
-      </mesh>
-
-      {/* Linterna portátil que ilumina el frente */}
-      <pointLight
-        position={[0, 1.2, 0.35]}
-        distance={7}
-        intensity={2.6}
-        color="#ffd6a0"
-      />
     </group>
   );
 }

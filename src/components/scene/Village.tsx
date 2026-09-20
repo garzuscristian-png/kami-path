@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+﻿import { useMemo } from "react";
 import * as THREE from "three";
 import { heightAt } from "./terrain";
 
@@ -56,7 +56,15 @@ function useHouses() {
   }, []);
 }
 
-function Minka({ data, mats }: { data: HouseData; mats: Record<string, THREE.Material> }) {
+function Minka({
+  data,
+  mats,
+  isNight = false,
+}: {
+  data: HouseData;
+  mats: Record<string, THREE.Material>;
+  isNight?: boolean;
+}) {
   const { w, d, h } = data;
   const roofH = 1.5 + h * 0.22;
   return (
@@ -66,12 +74,22 @@ function Minka({ data, mats }: { data: HouseData; mats: Record<string, THREE.Mat
         <boxGeometry args={[w + 0.9, 0.34, d + 0.9]} />
       </mesh>
       {/* cuerpo enlucido */}
-      <mesh position={[0, 0.33 + h / 2, 0]} castShadow receiveShadow material={mats["plaster"]!}>
+      <mesh
+        position={[0, 0.33 + h / 2, 0]}
+        castShadow
+        receiveShadow
+        material={mats["plaster"]!}
+      >
         <boxGeometry args={[w, h, d]} />
       </mesh>
       {/* vigas oscuras */}
       {[-w / 2 + 0.12, w / 2 - 0.12].map((x) => (
-        <mesh key={x} position={[x, 0.33 + h / 2, 0]} castShadow material={mats["beam"]!}>
+        <mesh
+          key={x}
+          position={[x, 0.33 + h / 2, 0]}
+          castShadow
+          material={mats["beam"]!}
+        >
           <boxGeometry args={[0.18, h, d + 0.06]} />
         </mesh>
       ))}
@@ -79,7 +97,10 @@ function Minka({ data, mats }: { data: HouseData; mats: Record<string, THREE.Mat
         <boxGeometry args={[w + 0.08, 0.2, d + 0.08]} />
       </mesh>
       {/* puerta corredera shoji */}
-      <mesh position={[0, 0.33 + h * 0.42, d / 2 + 0.02]} material={mats["shoji"]!}>
+      <mesh
+        position={[0, 0.33 + h * 0.42, d / 2 + 0.02]}
+        material={mats["shoji"]!}
+      >
         <planeGeometry args={[w * 0.52, h * 0.7]} />
       </mesh>
       {/* tejado a dos aguas */}
@@ -104,18 +125,39 @@ function Minka({ data, mats }: { data: HouseData; mats: Record<string, THREE.Mat
         </mesh>
       )}
       {/* alero */}
-      <mesh position={[0, 0.33 + h + 0.06, 0]} castShadow material={mats["beam"]!}>
+      <mesh
+        position={[0, 0.33 + h + 0.06, 0]}
+        castShadow
+        material={mats["beam"]!}
+      >
         <boxGeometry args={[w + 1.1, 0.12, d + 1.1]} />
       </mesh>
       {/* farol de papel */}
-      <mesh position={[w / 2 - 0.2, 0.33 + h * 0.85, d / 2 + 0.35]} material={mats["lantern"]!}>
+      <mesh
+        position={[w / 2 - 0.2, 0.33 + h * 0.85, d / 2 + 0.35]}
+        material={mats["lantern"]!}
+      >
         <sphereGeometry args={[0.2, 10, 8]} />
       </mesh>
+      {isNight && !data.ruined && (
+        <pointLight
+          position={[w / 2 - 0.2, 0.33 + h * 0.85, d / 2 + 0.4]}
+          color="#ffb356"
+          distance={4.5}
+          intensity={1.8}
+        />
+      )}
     </group>
   );
 }
 
-function TempleGrounds({ mats }: { mats: Record<string, THREE.Material> }) {
+function TempleGrounds({
+  mats,
+  isNight = false,
+}: {
+  mats: Record<string, THREE.Material>;
+  isNight?: boolean;
+}) {
   const zone = ZONES[1]!;
   const [cx, , cz] = zone.center;
   const base = heightAt(cx, cz);
@@ -151,7 +193,12 @@ function TempleGrounds({ mats }: { mats: Record<string, THREE.Material> }) {
 
       {/* escalinata */}
       {steps.map((s, i) => (
-        <mesh key={i} position={[cx, s.y, s.z]} receiveShadow material={mats["stone"]!}>
+        <mesh
+          key={i}
+          position={[cx, s.y, s.z]}
+          receiveShadow
+          material={mats["stone"]!}
+        >
           <boxGeometry args={[7, 0.3, 0.95]} />
         </mesh>
       ))}
@@ -161,17 +208,33 @@ function TempleGrounds({ mats }: { mats: Record<string, THREE.Material> }) {
         {/* pilares */}
         {[-4.2, -1.4, 1.4, 4.2].map((x) =>
           [-3.4, 3.4].map((z) => (
-            <mesh key={`${x}-${z}`} position={[x, 1.7, z]} castShadow material={mats["pillar"]!}>
+            <mesh
+              key={`${x}-${z}`}
+              position={[x, 1.7, z]}
+              castShadow
+              material={mats["pillar"]!}
+            >
               <cylinderGeometry args={[0.26, 0.3, 3.4, 10]} />
             </mesh>
           )),
         )}
         {/* muros */}
-        <mesh position={[0, 1.7, -3.6]} castShadow receiveShadow material={mats["plaster"]!}>
+        <mesh
+          position={[0, 1.7, -3.6]}
+          castShadow
+          receiveShadow
+          material={mats["plaster"]!}
+        >
           <boxGeometry args={[9.6, 3.4, 0.4]} />
         </mesh>
         {[-3.5, 3.5].map((x) => (
-          <mesh key={x} position={[x, 1.7, 0]} castShadow receiveShadow material={mats["plaster"]!}>
+          <mesh
+            key={x}
+            position={[x, 1.7, 0]}
+            castShadow
+            receiveShadow
+            material={mats["plaster"]!}
+          >
             <boxGeometry args={[2.6, 3.4, 7.4]} />
           </mesh>
         ))}
@@ -183,7 +246,12 @@ function TempleGrounds({ mats }: { mats: Record<string, THREE.Material> }) {
         <mesh position={[0, 3.7, 0]} castShadow material={mats["roof"]!}>
           <boxGeometry args={[12.4, 0.4, 10]} />
         </mesh>
-        <mesh position={[0, 4.5, 0]} rotation-y={Math.PI / 4} castShadow material={mats["roof"]!}>
+        <mesh
+          position={[0, 4.5, 0]}
+          rotation-y={Math.PI / 4}
+          castShadow
+          material={mats["roof"]!}
+        >
           <cylinderGeometry args={[0.4, 8.6, 2.2, 4, 1]} />
         </mesh>
         <mesh position={[0, 5.75, 0]} castShadow material={mats["pillar"]!}>
@@ -193,7 +261,12 @@ function TempleGrounds({ mats }: { mats: Record<string, THREE.Material> }) {
         <mesh position={[0, 1.3, 3.72]} material={mats["shoji"]!}>
           <planeGeometry args={[3.6, 2.4]} />
         </mesh>
-        <pointLight position={[0, 1.8, 1]} distance={12} intensity={3} color="#ffc98a" />
+        <pointLight
+          position={[0, 1.8, 1]}
+          distance={16}
+          intensity={isNight ? 5 : 3}
+          color="#ffc98a"
+        />
       </group>
 
       {/* torii de entrada */}
@@ -228,54 +301,77 @@ function TempleGrounds({ mats }: { mats: Record<string, THREE.Material> }) {
             <meshStandardMaterial
               color="#ffcf95"
               emissive={new THREE.Color("#ffa94d")}
-              emissiveIntensity={1.4}
+              emissiveIntensity={isNight ? 2.8 : 1.2}
             />
           </mesh>
+          {isNight && (
+            <pointLight
+              position={[0, 0.95, 0]}
+              color="#ffa94d"
+              distance={5}
+              intensity={2.0}
+            />
+          )}
         </group>
       ))}
     </group>
   );
 }
 
-/** Aldea japonesa, casas de labranza y recinto del templo. */
-export function Village() {
+/** Aldea japonesa, casas de labranza y recinto del templo con soporte de iluminación nocturna. */
+export function Village({ isNight = false }: { isNight?: boolean }) {
   const houses = useHouses();
 
   const mats = useMemo<Record<string, THREE.Material>>(
     () => ({
-      plaster: new THREE.MeshStandardMaterial({ color: "#cfc4ae", roughness: 0.95 }),
-      beam: new THREE.MeshStandardMaterial({ color: "#3b2d21", roughness: 0.9 }),
+      plaster: new THREE.MeshStandardMaterial({
+        color: "#cfc4ae",
+        roughness: 0.95,
+      }),
+      beam: new THREE.MeshStandardMaterial({
+        color: "#3b2d21",
+        roughness: 0.9,
+      }),
       roof: new THREE.MeshStandardMaterial({
         color: "#3a3f46",
         roughness: 0.8,
         flatShading: true,
       }),
-      stone: new THREE.MeshStandardMaterial({ color: "#7d7a70", roughness: 1 }),
+      stone: new THREE.MeshStandardMaterial({
+        color: "#7d7a70",
+        roughness: 1,
+      }),
       shoji: new THREE.MeshStandardMaterial({
         color: "#e6dcc2",
         roughness: 0.6,
-        emissive: new THREE.Color("#4a3a20"),
-        emissiveIntensity: 0.5,
+        emissive: new THREE.Color(isNight ? "#ff9a3c" : "#4a3a20"),
+        emissiveIntensity: isNight ? 1.1 : 0.5,
         side: THREE.DoubleSide,
       }),
-      pillar: new THREE.MeshStandardMaterial({ color: "#7b3b30", roughness: 0.8 }),
-      torii: new THREE.MeshStandardMaterial({ color: "#8c2f28", roughness: 0.7 }),
+      pillar: new THREE.MeshStandardMaterial({
+        color: "#7b3b30",
+        roughness: 0.8,
+      }),
+      torii: new THREE.MeshStandardMaterial({
+        color: "#8c2f28",
+        roughness: 0.7,
+      }),
       lantern: new THREE.MeshStandardMaterial({
         color: "#e8a765",
-        emissive: new THREE.Color("#c26a20"),
-        emissiveIntensity: 1.2,
+        emissive: new THREE.Color(isNight ? "#ffaa33" : "#c26a20"),
+        emissiveIntensity: isNight ? 2.8 : 1.2,
         roughness: 0.6,
       }),
     }),
-    [],
+    [isNight],
   );
 
   return (
     <group>
       {houses.map((h, i) => (
-        <Minka key={i} data={h} mats={mats} />
+        <Minka key={i} data={h} mats={mats} isNight={isNight} />
       ))}
-      <TempleGrounds mats={mats} />
+      <TempleGrounds mats={mats} isNight={isNight} />
     </group>
   );
 }

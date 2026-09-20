@@ -1,7 +1,8 @@
-import { useFrame } from "@react-three/fiber";
+﻿import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import type { PlayerHandle } from "./Player";
+import type { Biome } from "@/lib/game/nodes";
 import { heightAt } from "./terrain";
 import { ZONES } from "./Village";
 
@@ -27,16 +28,18 @@ export interface LootSpawn {
   kind: LootKind;
   pos: [number, number, number];
   zone: string;
+  name?: string;
 }
 
-/** Reparte botín dentro de las zonas habitadas. */
-export function useLootSpawns(): LootSpawn[] {
+/** Reparte botín temático según la naturaleza y fauna del bioma activo. */
+export function useLootSpawns(biome: Biome = "coast", seed: number = 90210): LootSpawn[] {
   return useMemo(() => {
-    const r = rng(90210);
+    const r = rng(seed + 42);
     const out: LootSpawn[] = [];
     let id = 0;
+
     for (const zone of ZONES) {
-      const count = zone.id === "templo" ? 7 : 8;
+      const count = zone.id === "templo" ? 8 : 10;
       for (let i = 0; i < count; i++) {
         const a = r() * Math.PI * 2;
         const d = zone.radius * (0.2 + r() * 0.8);
@@ -44,22 +47,87 @@ export function useLootSpawns(): LootSpawn[] {
         const z = zone.center[2] + Math.sin(a) * d;
         const y = heightAt(x, z);
         if (y < 0.2) continue;
+
         const roll = r();
-        const kind: LootKind =
-          zone.id === "templo"
-            ? roll > 0.55
-              ? "reliquia"
-              : "medicina"
-            : roll > 0.66
-              ? "comida"
-              : roll > 0.33
-                ? "chatarra"
-                : "medicina";
-        out.push({ id: id++, kind, pos: [x, y + 0.3, z], zone: zone.id });
+        let kind: LootKind = "chatarra";
+        let name = "Chatarra";
+
+        if (biome === "volcanic") {
+          // Abundante obsidiana y azufre
+          if (roll > 0.6) {
+            kind = "reliquia";
+            name = "Cristal de Obsidiana";
+          } else if (roll > 0.25) {
+            kind = "chatarra";
+            name = "Acero Fundido y Azufre";
+          } else {
+            kind = "comida";
+            name = "Carne Ahumada";
+          }
+        } else if (biome === "forest") {
+          // Abundantes hierbas medicinales y reliquias Shinto
+          if (roll > 0.55) {
+            kind = "medicina";
+            name = "Hierbas de Arashiyama";
+          } else if (roll > 0.3) {
+            kind = "reliquia";
+            name = "Amuleto Shinto";
+          } else {
+            kind = "comida";
+            name = "Brotes de Bambú";
+          }
+        } else if (biome === "snow") {
+          // Pieles, hielo sagrado y pescado
+          if (roll > 0.6) {
+            kind = "comida";
+            name = "Pescado de Hielo";
+          } else if (roll > 0.3) {
+            kind = "medicina";
+            name = "Bálsamo Térmico";
+          } else {
+            kind = "reliquia";
+            name = "Cristal de Escarcha";
+          }
+        } else if (biome === "urban") {
+          // Abundante chatarra industrial y raciones
+          if (roll > 0.4) {
+            kind = "chatarra";
+            name = "Componentes Eléctricos";
+          } else if (roll > 0.15) {
+            kind = "comida";
+            name = "Ración Militar Sellada";
+          } else {
+            kind = "medicina";
+            name = "Inyector Médico";
+          }
+        } else if (biome === "rural") {
+          // Abundante comida
+          if (roll > 0.45) {
+            kind = "comida";
+            name = "Saco de Arroz Tradicional";
+          } else if (roll > 0.2) {
+            kind = "chatarra";
+            name = "Herramienta de Forja";
+          } else {
+            kind = "medicina";
+            name = "Cataplasma de Campo";
+          }
+        } else {
+          // Costa por defecto
+          if (zone.id === "templo") {
+            kind = roll > 0.5 ? "reliquia" : "medicina";
+            name = kind === "reliquia" ? "Concha Sagrada" : "Algas Medicinales";
+          } else {
+            kind = roll > 0.66 ? "comida" : roll > 0.33 ? "chatarra" : "medicina";
+            name = kind === "comida" ? "Pescado Seco" : kind === "chatarra" ? "Restos de Red" : "Medicina";
+          }
+        }
+
+        out.push({ id: id++, kind, pos: [x, y + 0.3, z], zone: zone.id, name });
       }
     }
     return out;
-  }, []);
+  }, [biome, seed]);
 }
 
 export function LootItem({
@@ -99,44 +167,38 @@ export function LootItem({
   });
 
   if (taken) return null;
+
   const color = KIND_COLOR[spawn.kind];
 
   return (
     <group
       ref={ref}
       position={spawn.pos}
-      onPointerOver={(e) => {
-        e.stopPropagation();
-        document.body.style.cursor = "pointer";
-      }}
-      onPointerOut={() => {
-        document.body.style.cursor = "auto";
-      }}
       onClick={(e) => {
         e.stopPropagation();
         take();
       }}
+      onPointerOver={(e) => {
+        e.stopPropagation();
+        setNear(true);
+        document.body.style.cursor = "pointer";
+      }}
+      onPointerOut={() => {
+        setNear(false);
+        document.body.style.cursor = "auto";
+      }}
     >
-      <mesh castShadow rotation={[0.3, 0, 0.2]}>
-        {spawn.kind === "reliquia" ? (
-          <octahedronGeometry args={[0.26, 0]} />
-        ) : spawn.kind === "medicina" ? (
-          <boxGeometry args={[0.34, 0.22, 0.24]} />
-        ) : spawn.kind === "comida" ? (
-          <cylinderGeometry args={[0.16, 0.16, 0.3, 10]} />
-        ) : (
-          <dodecahedronGeometry args={[0.22, 0]} />
-        )}
+      <mesh castShadow>
+        <boxGeometry args={[0.34, 0.34, 0.34]} />
         <meshStandardMaterial
           color={color}
-          emissive={new THREE.Color(color)}
-          emissiveIntensity={near ? 1.1 : 0.45}
-          roughness={0.55}
-          metalness={0.25}
+          emissive={color}
+          emissiveIntensity={near ? 0.9 : 0.3}
+          roughness={0.4}
         />
       </mesh>
       {near && (
-        <pointLight distance={3.5} intensity={3} color={color} position={[0, 0.25, 0]} />
+        <pointLight color={color} intensity={2.5} distance={3.5} position={[0, 0.2, 0]} />
       )}
     </group>
   );

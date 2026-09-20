@@ -1,4 +1,4 @@
-import {
+﻿import {
   Cloud,
   Clouds,
   Environment,
@@ -12,7 +12,12 @@ import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { Player, type PlayerHandle } from "./Player";
-import { Zombie, type ZombieSpawn } from "./Zombie";
+import { Zombie, type ZombieSpawn, type ZombieArchetype } from "./Zombie";
+import { Shelter } from "./Shelter";
+import { Defenses, type PlacedDefense } from "./Defenses";
+import { CoopTeammate } from "./CoopTeammate";
+import { BiomeScenery } from "./BiomeScenery";
+import type { PartnerState } from "@/lib/game/coop";
 import {
   createAshSandTexture,
   createStoneTexture,
@@ -26,6 +31,9 @@ import { BIOME_THEMES } from "@/lib/game/biomes";
 import type { Biome } from "@/lib/game/nodes";
 
 const SEA_LEVEL = -0.35;
+const HOME_X = 0;
+const HOME_Z = 3;
+const HOME_RADIUS = 9.5;
 
 function rng(seed: number) {
   let s = seed >>> 0;
@@ -35,7 +43,13 @@ function rng(seed: number) {
   };
 }
 
-function Terrain({ sand, color = "#ece3d0" }: { sand: THREE.Texture; color?: string }) {
+function Terrain({
+  sand,
+  color = "#ece3d0",
+}: {
+  sand: THREE.Texture;
+  color?: string;
+}) {
   const geometry = useMemo(() => createTerrainGeometry(), []);
   return (
     <mesh geometry={geometry} position={[0, -0.02, 0]} receiveShadow>
@@ -97,14 +111,12 @@ function Dock({ wood }: { wood: THREE.Texture }) {
           />
         </mesh>
       ))}
-      {/* vigas longitudinales */}
       {[-1.8, 1.8].map((x) => (
         <mesh key={x} position={[x, 0.3, -7.5]} castShadow>
           <boxGeometry args={[0.25, 0.25, 14]} />
           <meshStandardMaterial map={wood} roughness={0.9} color="#6b5540" />
         </mesh>
       ))}
-      {/* pilotes */}
       {Array.from({ length: 8 }).map((_, i) => {
         const z = -1.5 - i * 1.8;
         return [-1.8, 1.8].map((x) => (
@@ -118,7 +130,13 @@ function Dock({ wood }: { wood: THREE.Texture }) {
   );
 }
 
-function Crates({ wood, stone }: { wood: THREE.Texture; stone: THREE.Texture }) {
+function Crates({
+  wood,
+  stone,
+}: {
+  wood: THREE.Texture;
+  stone: THREE.Texture;
+}) {
   const items = useMemo(() => {
     const r = rng(77);
     return Array.from({ length: 9 }, () => ({
@@ -203,9 +221,9 @@ function Volcano() {
     if (!attr) return;
     const arr = attr.array as Float32Array;
     for (let i = 0; i < arr.length; i += 3) {
-      arr[i + 1]! += delta * 0.5;
-      arr[i]! += delta * 0.35;
-      if (arr[i + 1]! > 32) {
+      arr[i + 1] += delta * 0.5;
+      arr[i] += delta * 0.35;
+      if (arr[i + 1] > 32) {
         arr[i + 1] = 14;
         arr[i] = (Math.random() - 0.5) * 6;
       }
@@ -265,10 +283,10 @@ function BiomeParticles({
     const t = state.clock.elapsedTime;
     const arr = attr.array as Float32Array;
     for (let i = 0; i < arr.length; i += 3) {
-      arr[i + 1]! += dt * speedY;
-      arr[i]! += Math.sin(t * 0.4 + i) * dt * 0.25;
-      if (speedY < 0 && arr[i + 1]! < -0.5) arr[i + 1] = 18;
-      else if (speedY > 0 && arr[i + 1]! > 18) arr[i + 1] = -0.5;
+      arr[i + 1] += dt * speedY;
+      arr[i] += Math.sin(t * 0.4 + i) * dt * 0.25;
+      if (speedY < 0 && arr[i + 1] < -0.5) arr[i + 1] = 18;
+      else if (speedY > 0 && arr[i + 1] > 18) arr[i + 1] = -0.5;
     }
     attr.needsUpdate = true;
   });
@@ -289,6 +307,128 @@ function BiomeParticles({
   );
 }
 
+function NightFireflies() {
+  const ref = useRef<THREE.Points>(null);
+  const positions = useMemo(() => {
+    const r = rng(999);
+    const arr = new Float32Array(180 * 3);
+    for (let i = 0; i < 180; i++) {
+      arr[i * 3] = (r() - 0.5) * 55;
+      arr[i * 3 + 1] = 0.5 + r() * 5.5;
+      arr[i * 3 + 2] = (r() - 0.5) * 55;
+    }
+    return arr;
+  }, []);
+
+  useFrame((state, delta) => {
+    const pts = ref.current;
+    if (!pts) return;
+    const attr = pts.geometry.attributes["position"];
+    if (!attr) return;
+    const t = state.clock.elapsedTime;
+    const arr = attr.array as Float32Array;
+    for (let i = 0; i < arr.length; i += 3) {
+      arr[i + 1] += Math.sin(t * 1.5 + i) * delta * 0.4;
+      arr[i] += Math.cos(t * 0.8 + i) * delta * 0.3;
+      arr[i + 2] += Math.sin(t * 0.9 + i) * delta * 0.3;
+    }
+    attr.needsUpdate = true;
+  });
+
+  return (
+    <points ref={ref}>
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+      </bufferGeometry>
+      <pointsMaterial
+        size={0.16}
+        color="#d8f878"
+        transparent
+        opacity={0.85}
+        depthWrite={false}
+      />
+    </points>
+  );
+}
+
+function Moon() {
+  return (
+    <group position={[-42, 48, -75]}>
+      <mesh>
+        <sphereGeometry args={[7.5, 24, 24]} />
+        <meshBasicMaterial color="#f0f5ff" />
+      </mesh>
+      <mesh>
+        <sphereGeometry args={[8.8, 16, 16]} />
+        <meshBasicMaterial
+          color="#9ec5ff"
+          transparent
+          opacity={0.18}
+          side={THREE.BackSide}
+        />
+      </mesh>
+    </group>
+  );
+}
+
+function HomeSafeWard() {
+  const ringRef = useRef<THREE.Mesh>(null);
+
+  useFrame((state) => {
+    if (ringRef.current) {
+      const mat = ringRef.current.material as THREE.MeshBasicMaterial;
+      if (mat) {
+        mat.opacity = 0.28 + Math.sin(state.clock.elapsedTime * 2) * 0.12;
+      }
+    }
+  });
+
+  const posts = useMemo(() => {
+    const out: [number, number][] = [];
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      out.push([
+        HOME_X + Math.cos(angle) * HOME_RADIUS,
+        HOME_Z + Math.sin(angle) * HOME_RADIUS,
+      ]);
+    }
+    return out;
+  }, []);
+
+  return (
+    <group>
+      <mesh
+        ref={ringRef}
+        rotation-x={-Math.PI / 2}
+        position={[HOME_X, 0.04, HOME_Z]}
+      >
+        <ringGeometry args={[HOME_RADIUS - 0.2, HOME_RADIUS + 0.2, 48]} />
+        <meshBasicMaterial color="#5bc0be" transparent opacity={0.35} />
+      </mesh>
+
+      {posts.map(([x, z], i) => {
+        const y = heightAt(x, z);
+        return (
+          <group key={i} position={[x, y, z]}>
+            <mesh position={[0, 0.6, 0]} castShadow>
+              <cylinderGeometry args={[0.06, 0.08, 1.2, 6]} />
+              <meshStandardMaterial color="#6a4c35" />
+            </mesh>
+            <mesh position={[0, 1.1, 0]}>
+              <boxGeometry args={[0.18, 0.26, 0.18]} />
+              <meshStandardMaterial
+                color="#e0fbfc"
+                emissive="#48cae4"
+                emissiveIntensity={1.8}
+              />
+            </mesh>
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
 function Driftwood({
   position,
   onCollect,
@@ -304,7 +444,7 @@ function Driftwood({
   const collected = useRef(false);
 
   const collect = () => {
-    if (collected.current) return; // evita doble cobro por proximidad + clic
+    if (collected.current) return;
     collected.current = true;
     setTaken(true);
     document.body.style.cursor = "auto";
@@ -314,13 +454,13 @@ function Driftwood({
   useFrame((state) => {
     if (ref.current && !collected.current) {
       ref.current.position.y =
-        position[1] + Math.sin(state.clock.elapsedTime * 1.6 + position[0]) * 0.06;
+        position[1] +
+        Math.sin(state.clock.elapsedTime * 1.6 + position[0]) * 0.06;
       const dx = player.position.x - position[0];
       const dz = player.position.z - position[2];
       const d2 = dx * dx + dz * dz;
       const near = d2 < 2.6;
       if (near !== hover) setHover(near);
-      // radio generoso para que nunca se quede atascado sin recogerse
       if (d2 < 2.25) collect();
     }
   });
@@ -355,7 +495,12 @@ function Driftwood({
         />
       </mesh>
       {hover && (
-        <pointLight distance={2.6} intensity={3} color="#e0a860" position={[0, 0.2, 0]} />
+        <pointLight
+          distance={2.6}
+          intensity={3}
+          color="#e0a860"
+          position={[0, 0.2, 0]}
+        />
       )}
     </group>
   );
@@ -367,7 +512,11 @@ function FollowCamera({ player }: { player: PlayerHandle }) {
     const c = ref.current;
     if (!c) return;
     c.target.lerp(
-      new THREE.Vector3(player.position.x, player.position.y + 1.2, player.position.z),
+      new THREE.Vector3(
+        player.position.x,
+        player.position.y + 1.2,
+        player.position.z,
+      ),
       0.15,
     );
     c.update();
@@ -383,7 +532,6 @@ function FollowCamera({ player }: { player: PlayerHandle }) {
   );
 }
 
-/** Islas y cordilleras lejanas para que el horizonte no quede vacío. */
 function Horizon() {
   const islands = useMemo(() => {
     const r = rng(555);
@@ -391,7 +539,11 @@ function Horizon() {
       const a = r() * Math.PI * 2;
       const d = 95 + r() * 60;
       return {
-        pos: [Math.cos(a) * d, SEA_LEVEL - 1, Math.sin(a) * d] as [number, number, number],
+        pos: [
+          Math.cos(a) * d,
+          SEA_LEVEL - 1,
+          Math.sin(a) * d,
+        ] as [number, number, number],
         radius: 12 + r() * 30,
         height: 8 + r() * 26,
         seg: 5 + Math.floor(r() * 4),
@@ -407,7 +559,9 @@ function Horizon() {
         <mesh key={i} position={is.pos} rotation-y={is.rot}>
           <coneGeometry args={[is.radius, is.height, is.seg]} />
           <meshStandardMaterial
-            color={new THREE.Color(is.tint * 0.9, is.tint * 0.95, is.tint * 1.15)}
+            color={
+              new THREE.Color(is.tint * 0.9, is.tint * 0.95, is.tint * 1.15)
+            }
             roughness={1}
             fog
           />
@@ -416,9 +570,10 @@ function Horizon() {
     </group>
   );
 }
-
 export function KagoshimaScene({
   biome = "coast",
+  danger = 1,
+  seed = 1001,
   onCollect,
   onHit,
   onLoot,
@@ -426,8 +581,16 @@ export function KagoshimaScene({
   onStaminaChange,
   onPlayerMove,
   damagePerHit = 1,
+  shelterLevel = 0,
+  defenses = [],
+  partner = null,
+  isNight = false,
+  onOpenShelterUpgrade,
+  onTriggerTrap,
 }: {
   biome?: Biome;
+  danger?: number;
+  seed?: number;
   onCollect: () => void;
   onHit: () => void;
   onLoot: (kind: LootKind) => void;
@@ -435,9 +598,15 @@ export function KagoshimaScene({
   onStaminaChange?: (stamina: number) => void;
   onPlayerMove?: (x: number, z: number, angle: number) => void;
   damagePerHit?: number;
+  shelterLevel?: number;
+  defenses?: PlacedDefense[];
+  partner?: PartnerState | null;
+  isNight?: boolean;
+  onOpenShelterUpgrade?: () => void;
+  onTriggerTrap?: (trapId: string, zombieId: number) => void;
 }) {
   const theme = BIOME_THEMES[biome] ?? BIOME_THEMES.coast;
-  const loot = useLootSpawns();
+  const loot = useLootSpawns(biome, seed);
   const player = useMemo<PlayerHandle>(
     () => ({
       position: new THREE.Vector3(0, 0, 3),
@@ -469,19 +638,62 @@ export function KagoshimaScene({
   }, []);
 
   const zombies = useMemo<ZombieSpawn[]>(() => {
-    const r = rng(3131);
+    const r = rng(seed + 3131);
+    const count = Math.min(22, Math.max(8, 8 + danger * 2));
     const out: ZombieSpawn[] = [];
     let guard = 0;
-    while (out.length < 10 && guard < 400) {
+    while (out.length < count && guard < 600) {
       guard++;
-      const x = (r() - 0.5) * 80;
-      const z = 2 + r() * 48;
-      // nunca aparecen encima del jugador (inicio en 0,3)
-      if (Math.hypot(x, z - 3) < 22) continue;
-      out.push({ id: out.length, origin: [x, 0, z], seed: r() * 6.28 });
+      const x = (r() - 0.5) * 88;
+      const z = 2 + r() * 52;
+      if (Math.hypot(x - HOME_X, z - HOME_Z) < HOME_RADIUS + 3) continue;
+
+      const idx = out.length;
+      let archetype: ZombieArchetype = "normal";
+      let maxHealth = 3;
+      let name = "Caminante";
+
+      if (idx === 0 && danger >= 4) {
+        archetype = "boss";
+        maxHealth = 12;
+        name = "Kensei Corrupto (Jefe)";
+      } else if (biome === "volcanic") {
+        archetype = "volcanic_crawler";
+        maxHealth = 4;
+        name = "Rastreador de Cenizas";
+      } else if (biome === "forest") {
+        archetype = idx % 2 === 0 ? "armored_samurai" : "normal";
+        maxHealth = idx % 2 === 0 ? 6 : 3;
+        name = idx % 2 === 0 ? "Samurái Acorazado" : "Errante del Bosque";
+      } else if (biome === "snow") {
+        archetype = idx % 2 === 0 ? "frost_wendigo" : "normal";
+        maxHealth = idx % 2 === 0 ? 5 : 3;
+        name = idx % 2 === 0 ? "Wendigo Glacial" : "Cuerpo Congelado";
+      } else if (biome === "urban") {
+        archetype = idx % 2 === 0 ? "toxic_mutant" : "normal";
+        maxHealth = idx % 2 === 0 ? 5 : 3;
+        name = idx % 2 === 0 ? "Mutante Radiactivo" : "Carroñero Urbano";
+      } else if (biome === "mountain") {
+        archetype = idx % 3 === 0 ? "armored_samurai" : "normal";
+        maxHealth = idx % 3 === 0 ? 6 : 3;
+        name = idx % 3 === 0 ? "Guardia Ronin" : "Espíritu de Piedra";
+      } else if (biome === "rural") {
+        archetype = idx % 3 === 0 ? "volcanic_crawler" : "normal";
+        maxHealth = 3;
+        name = "Espantapájaros Maldito";
+      }
+
+      out.push({
+        id: idx,
+        origin: [x, 0, z],
+        seed: r() * 6.28,
+        archetype,
+        maxHealth,
+        name,
+      });
     }
     return out;
-  }, []);
+  }, [biome, danger, seed]);
 
   return (
     <>
@@ -539,18 +751,34 @@ export function KagoshimaScene({
       <Terrain sand={sand} color={theme.groundColor} />
       <Trees />
       <Village />
+      <HomeSafeWard />
       <Sea />
       <Dock wood={wood} />
       <Crates wood={wood} stone={stone} />
       <Torii />
       <Volcano />
+      <BiomeScenery biome={biome} />
       <BiomeParticles
         color={theme.particleColor}
         size={theme.particleSize}
         speedY={theme.particleSpeedY}
       />
+
+      <Shelter
+        level={shelterLevel}
+        player={player}
+        onOpenUpgrade={onOpenShelterUpgrade}
+        isNight={isNight}
+      />
+
+      <Defenses defenses={defenses} onTriggerTrap={onTriggerTrap} />
+
+      <CoopTeammate partner={partner} />
+
       <Player
         handle={player}
+        defenses={defenses}
+        shelterLevel={shelterLevel}
         onStaminaChange={onStaminaChange}
         onPlayerMove={onPlayerMove}
       />
@@ -561,6 +789,9 @@ export function KagoshimaScene({
           spawn={z}
           player={player}
           damagePerHit={damagePerHit}
+          isNight={isNight}
+          defenses={defenses}
+          onTriggerTrap={onTriggerTrap}
           onCatch={onHit}
           onKill={onKillZombie}
         />
@@ -578,3 +809,4 @@ export function KagoshimaScene({
     </>
   );
 }
+
