@@ -18,17 +18,16 @@ import { Defenses, type PlacedDefense } from "./Defenses";
 import { CoopTeammate } from "./CoopTeammate";
 import { BiomeScenery } from "./BiomeScenery";
 import type { PartnerState } from "@/lib/game/coop";
-import {
-  createAshSandTexture,
-  createStoneTexture,
-  createWoodTexture,
-} from "./textures";
+import { createAshSandTexture, createStoneTexture, createWoodTexture } from "./textures";
 import { createTerrainGeometry, heightAt } from "./terrain";
 import { Trees } from "./Trees";
 import { Village } from "./Village";
 import { LootItem, useLootSpawns, type LootKind } from "./Loot";
 import { BIOME_THEMES } from "@/lib/game/biomes";
 import type { Biome } from "@/lib/game/nodes";
+import { useWorld } from "./WorldContext";
+import { ProceduralLandscape } from "./ProceduralLandscape";
+import { isClear } from "./WorldCollisions";
 
 const SEA_LEVEL = -0.35;
 const HOME_X = 0;
@@ -43,22 +42,12 @@ function rng(seed: number) {
   };
 }
 
-function Terrain({
-  sand,
-  color = "#ece3d0",
-}: {
-  sand: THREE.Texture;
-  color?: string;
-}) {
-  const geometry = useMemo(() => createTerrainGeometry(), []);
+function Terrain({ sand, color = "#ece3d0" }: { sand: THREE.Texture; color?: string }) {
+  const { height } = useWorld();
+  const geometry = useMemo(() => createTerrainGeometry(height), [height]);
   return (
     <mesh geometry={geometry} position={[0, -0.02, 0]} receiveShadow>
-      <meshStandardMaterial
-        map={sand}
-        roughness={1}
-        color={color}
-        vertexColors
-      />
+      <meshStandardMaterial map={sand} roughness={1} color={color} vertexColors />
     </mesh>
   );
 }
@@ -96,13 +85,7 @@ function Dock({ wood }: { wood: THREE.Texture }) {
   return (
     <group>
       {planks.map((p, i) => (
-        <mesh
-          key={i}
-          position={[0, 0.42, p.z]}
-          rotation-z={p.tilt}
-          castShadow
-          receiveShadow
-        >
+        <mesh key={i} position={[0, 0.42, p.z]} rotation-z={p.tilt} castShadow receiveShadow>
           <boxGeometry args={[4.2, 0.12, 0.52]} />
           <meshStandardMaterial
             map={wood}
@@ -130,21 +113,11 @@ function Dock({ wood }: { wood: THREE.Texture }) {
   );
 }
 
-function Crates({
-  wood,
-  stone,
-}: {
-  wood: THREE.Texture;
-  stone: THREE.Texture;
-}) {
+function Crates({ wood, stone }: { wood: THREE.Texture; stone: THREE.Texture }) {
   const items = useMemo(() => {
     const r = rng(77);
     return Array.from({ length: 9 }, () => ({
-      pos: [
-        (r() - 0.5) * 9,
-        0,
-        1 + r() * 7,
-      ] as [number, number, number],
+      pos: [(r() - 0.5) * 9, 0, 1 + r() * 7] as [number, number, number],
       rot: r() * Math.PI,
       s: 0.5 + r() * 0.45,
       barrel: r() > 0.6,
@@ -178,9 +151,7 @@ function Crates({
 }
 
 function Torii() {
-  const mat = (
-    <meshStandardMaterial color="#6e2320" roughness={0.7} metalness={0.05} />
-  );
+  const mat = <meshStandardMaterial color="#6e2320" roughness={0.7} metalness={0.05} />;
   return (
     <group position={[-7.5, SEA_LEVEL, -12]} rotation-y={0.25}>
       {[-1.5, 1.5].map((x) => (
@@ -241,13 +212,7 @@ function Volcano() {
         <bufferGeometry>
           <bufferAttribute attach="attributes-position" args={[smoke, 3]} />
         </bufferGeometry>
-        <pointsMaterial
-          size={3.2}
-          color="#6b6a68"
-          transparent
-          opacity={0.28}
-          depthWrite={false}
-        />
+        <pointsMaterial size={3.2} color="#6b6a68" transparent opacity={0.28} depthWrite={false} />
       </points>
     </group>
   );
@@ -296,13 +261,7 @@ function BiomeParticles({
       <bufferGeometry>
         <bufferAttribute attach="attributes-position" args={[positions, 3]} />
       </bufferGeometry>
-      <pointsMaterial
-        size={size}
-        color={color}
-        transparent
-        opacity={0.65}
-        depthWrite={false}
-      />
+      <pointsMaterial size={size} color={color} transparent opacity={0.65} depthWrite={false} />
     </points>
   );
 }
@@ -340,13 +299,7 @@ function NightFireflies() {
       <bufferGeometry>
         <bufferAttribute attach="attributes-position" args={[positions, 3]} />
       </bufferGeometry>
-      <pointsMaterial
-        size={0.16}
-        color="#d8f878"
-        transparent
-        opacity={0.85}
-        depthWrite={false}
-      />
+      <pointsMaterial size={0.16} color="#d8f878" transparent opacity={0.85} depthWrite={false} />
     </points>
   );
 }
@@ -360,12 +313,7 @@ function Moon() {
       </mesh>
       <mesh>
         <sphereGeometry args={[8.8, 16, 16]} />
-        <meshBasicMaterial
-          color="#9ec5ff"
-          transparent
-          opacity={0.18}
-          side={THREE.BackSide}
-        />
+        <meshBasicMaterial color="#9ec5ff" transparent opacity={0.18} side={THREE.BackSide} />
       </mesh>
     </group>
   );
@@ -387,21 +335,14 @@ function HomeSafeWard() {
     const out: [number, number][] = [];
     for (let i = 0; i < 8; i++) {
       const angle = (i / 8) * Math.PI * 2;
-      out.push([
-        HOME_X + Math.cos(angle) * HOME_RADIUS,
-        HOME_Z + Math.sin(angle) * HOME_RADIUS,
-      ]);
+      out.push([HOME_X + Math.cos(angle) * HOME_RADIUS, HOME_Z + Math.sin(angle) * HOME_RADIUS]);
     }
     return out;
   }, []);
 
   return (
     <group>
-      <mesh
-        ref={ringRef}
-        rotation-x={-Math.PI / 2}
-        position={[HOME_X, 0.04, HOME_Z]}
-      >
+      <mesh ref={ringRef} rotation-x={-Math.PI / 2} position={[HOME_X, 0.04, HOME_Z]}>
         <ringGeometry args={[HOME_RADIUS - 0.2, HOME_RADIUS + 0.2, 48]} />
         <meshBasicMaterial color="#5bc0be" transparent opacity={0.35} />
       </mesh>
@@ -416,11 +357,7 @@ function HomeSafeWard() {
             </mesh>
             <mesh position={[0, 1.1, 0]}>
               <boxGeometry args={[0.18, 0.26, 0.18]} />
-              <meshStandardMaterial
-                color="#e0fbfc"
-                emissive="#48cae4"
-                emissiveIntensity={1.8}
-              />
+              <meshStandardMaterial color="#e0fbfc" emissive="#48cae4" emissiveIntensity={1.8} />
             </mesh>
           </group>
         );
@@ -444,7 +381,11 @@ function Driftwood({
   const collected = useRef(false);
 
   const collect = () => {
-    if (collected.current) return;
+    if (
+      collected.current ||
+      Math.hypot(player.position.x - position[0], player.position.z - position[2]) > 1.8
+    )
+      return;
     collected.current = true;
     setTaken(true);
     document.body.style.cursor = "auto";
@@ -454,8 +395,7 @@ function Driftwood({
   useFrame((state) => {
     if (ref.current && !collected.current) {
       ref.current.position.y =
-        position[1] +
-        Math.sin(state.clock.elapsedTime * 1.6 + position[0]) * 0.06;
+        position[1] + Math.sin(state.clock.elapsedTime * 1.6 + position[0]) * 0.06;
       const dx = player.position.x - position[0];
       const dz = player.position.z - position[2];
       const d2 = dx * dx + dz * dz;
@@ -494,14 +434,7 @@ function Driftwood({
           roughness={0.9}
         />
       </mesh>
-      {hover && (
-        <pointLight
-          distance={2.6}
-          intensity={3}
-          color="#e0a860"
-          position={[0, 0.2, 0]}
-        />
-      )}
+      {hover && <pointLight distance={2.6} intensity={3} color="#e0a860" position={[0, 0.2, 0]} />}
     </group>
   );
 }
@@ -512,11 +445,7 @@ function FollowCamera({ player }: { player: PlayerHandle }) {
     const c = ref.current;
     if (!c) return;
     c.target.lerp(
-      new THREE.Vector3(
-        player.position.x,
-        player.position.y + 1.2,
-        player.position.z,
-      ),
+      new THREE.Vector3(player.position.x, player.position.y + 1.2, player.position.z),
       0.15,
     );
     c.update();
@@ -539,11 +468,7 @@ function Horizon() {
       const a = r() * Math.PI * 2;
       const d = 95 + r() * 60;
       return {
-        pos: [
-          Math.cos(a) * d,
-          SEA_LEVEL - 1,
-          Math.sin(a) * d,
-        ] as [number, number, number],
+        pos: [Math.cos(a) * d, SEA_LEVEL - 1, Math.sin(a) * d] as [number, number, number],
         radius: 12 + r() * 30,
         height: 8 + r() * 26,
         seg: 5 + Math.floor(r() * 4),
@@ -559,9 +484,7 @@ function Horizon() {
         <mesh key={i} position={is.pos} rotation-y={is.rot}>
           <coneGeometry args={[is.radius, is.height, is.seg]} />
           <meshStandardMaterial
-            color={
-              new THREE.Color(is.tint * 0.9, is.tint * 0.95, is.tint * 1.15)
-            }
+            color={new THREE.Color(is.tint * 0.9, is.tint * 0.95, is.tint * 1.15)}
             roughness={1}
             fog
           />
@@ -605,6 +528,7 @@ export function KagoshimaScene({
   onOpenShelterUpgrade?: () => void;
   onTriggerTrap?: (trapId: string, zombieId: number) => void;
 }) {
+  const { height: heightAt, obstacles } = useWorld();
   const theme = BIOME_THEMES[biome] ?? BIOME_THEMES.coast;
   const loot = useLootSpawns(biome, seed);
   const player = useMemo<PlayerHandle>(
@@ -621,21 +545,17 @@ export function KagoshimaScene({
   const stone = useMemo(() => createStoneTexture(), []);
 
   const drifts = useMemo(() => {
-    const r = rng(2024);
-    return Array.from({ length: 12 }, (_, i) => {
-      const onDock = i % 3 === 0;
+    const r = rng(seed + 2024);
+    return Array.from({ length: 36 }, (_, i) => {
+      const onDock = biome === "coast" && i % 3 === 0;
       const x = onDock ? (r() - 0.5) * 3 : (r() - 0.5) * 34;
       const z = onDock ? -2 - r() * 10 : 1 + r() * 20;
       return {
         id: i,
-        pos: [x, onDock ? 0.6 : heightAt(x, z) + 0.18, z] as [
-          number,
-          number,
-          number,
-        ],
+        pos: [x, onDock ? 0.6 : heightAt(x, z) + 0.18, z] as [number, number, number],
       };
-    });
-  }, []);
+    }).filter((d) => isClear(d.pos[0], d.pos[2], 0.8, obstacles));
+  }, [seed, biome, heightAt, obstacles]);
 
   const zombies = useMemo<ZombieSpawn[]>(() => {
     const r = rng(seed + 3131);
@@ -647,6 +567,7 @@ export function KagoshimaScene({
       const x = (r() - 0.5) * 88;
       const z = 2 + r() * 52;
       if (Math.hypot(x - HOME_X, z - HOME_Z) < HOME_RADIUS + 3) continue;
+      if (!isClear(x, z, 1.2, obstacles) || heightAt(x, z) < 0) continue;
 
       const idx = out.length;
       let archetype: ZombieArchetype = "normal";
@@ -701,7 +622,7 @@ export function KagoshimaScene({
       <fog attach="fog" args={[theme.fogColor, theme.fogNear, theme.fogFar]} />
       <Sky
         distance={4500}
-        sunPosition={theme.skySun}
+        sunPosition={isNight ? [0, -40, -60] : theme.skySun}
         turbidity={theme.skyTurbidity}
         rayleigh={theme.skyRayleigh}
         mieCoefficient={0.02}
@@ -724,10 +645,10 @@ export function KagoshimaScene({
       </Clouds>
       <Horizon />
 
-      <hemisphereLight args={[theme.hemiSky, theme.hemiGround, 2.1]} />
+      <hemisphereLight args={[theme.hemiSky, theme.hemiGround, isNight ? 0.3 : 2.1]} />
       <directionalLight
         position={[12, 10, -6]}
-        intensity={theme.dirLightIntensity}
+        intensity={isNight ? 0.15 : theme.dirLightIntensity}
         color={theme.dirLightColor}
         castShadow
         shadow-mapSize-width={2048}
@@ -737,7 +658,7 @@ export function KagoshimaScene({
         shadow-camera-top={20}
         shadow-camera-bottom={-20}
       />
-      <Environment>
+      <Environment environmentIntensity={isNight ? 0.12 : 1}>
         <Lightformer intensity={1.4} position={[0, 8, -10]} scale={[20, 8, 1]} color="#ffb98a" />
         <Lightformer
           intensity={0.8}
@@ -749,15 +670,15 @@ export function KagoshimaScene({
       </Environment>
 
       <Terrain sand={sand} color={theme.groundColor} />
-      <Trees />
-      <Village />
+      <ProceduralLandscape />
       <HomeSafeWard />
-      <Sea />
-      <Dock wood={wood} />
-      <Crates wood={wood} stone={stone} />
-      <Torii />
-      <Volcano />
-      <BiomeScenery biome={biome} />
+      {biome === "coast" && (
+        <>
+          <Sea />
+          <Dock wood={wood} />
+        </>
+      )}
+      {biome === "volcanic" && <Volcano />}
       <BiomeParticles
         color={theme.particleColor}
         size={theme.particleSize}
@@ -809,4 +730,3 @@ export function KagoshimaScene({
     </>
   );
 }
-

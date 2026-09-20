@@ -38,7 +38,7 @@ export function heightAt(x: number, z: number): number {
 }
 
 /** Geometría del terreno desplazada + bandas de color tipo curva de nivel. */
-export function createTerrainGeometry() {
+export function createTerrainGeometry(sampleHeight = heightAt) {
   const geo = new THREE.PlaneGeometry(
     TERRAIN_SIZE,
     TERRAIN_SIZE,
@@ -57,7 +57,7 @@ export function createTerrainGeometry() {
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i);
     const z = pos.getZ(i);
-    const y = heightAt(x, z);
+    const y = sampleHeight(x, z);
     pos.setY(i, y);
 
     // color por altura
@@ -65,7 +65,7 @@ export function createTerrainGeometry() {
     tmp.copy(y < 0 ? low : base).lerp(high, t);
 
     // curvas de nivel: banda oscura cada metro
-    const band = Math.abs(((y % 1) + 1) % 1 - 0.5) * 2; // 0 en el borde de la banda
+    const band = Math.abs((((y % 1) + 1) % 1) - 0.5) * 2; // 0 en el borde de la banda
     const line = 1 - smoothstep(0.82, 1, band) * 0.35;
     tmp.multiplyScalar(line);
 

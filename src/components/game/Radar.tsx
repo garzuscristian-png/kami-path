@@ -1,6 +1,7 @@
 import React from "react";
 
 interface RadarProps {
+  points?: { name: string; x: number; z: number; color: string }[];
   playerX: number;
   playerZ: number;
   playerAngle: number;
@@ -13,7 +14,7 @@ const POIS = [
   { name: "Muelle", x: 0, z: -2, color: "#38bdf8" },
 ];
 
-export function Radar({ playerX, playerZ, playerAngle }: RadarProps) {
+export function Radar({ playerX, playerZ, playerAngle, points = POIS }: RadarProps) {
   const radarRadius = 46;
   const maxRange = 60; // radio de detección en unidades del mundo
 
@@ -46,7 +47,7 @@ export function Radar({ playerX, playerZ, playerAngle }: RadarProps) {
         />
 
         {/* Puntos de interés proyectados en el radar */}
-        {POIS.map((poi) => {
+        {points.map((poi) => {
           const dx = poi.x - playerX;
           const dz = poi.z - playerZ;
           const dist = Math.hypot(dx, dz);

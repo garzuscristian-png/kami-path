@@ -1,8 +1,8 @@
 ﻿import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
-import { heightAt } from "./terrain";
-import { resolveCollisions } from "./Collisions";
+import { useWorld } from "./WorldContext";
+import { moveWithCollisions } from "./WorldCollisions";
 import { sound } from "@/lib/game/audio";
 
 const SPEED = 4.2;
@@ -35,6 +35,7 @@ export function Player({
   onStaminaChange,
   onPlayerMove,
 }: PlayerProps) {
+  const { height: heightAt, obstacles, biome } = useWorld();
   const group = useRef<THREE.Group>(null);
   const legL = useRef<THREE.Mesh>(null);
   const legR = useRef<THREE.Mesh>(null);
@@ -82,10 +83,10 @@ export function Player({
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLElement && e.target.closest("button,input,textarea,select"))
+        return;
       keys.current[e.code] = true;
-      if (
-        ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)
-      ) {
+      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) {
         e.preventDefault();
       }
       if (e.code === "Space" || e.code === "KeyF" || e.code === "KeyE") {
@@ -99,15 +100,21 @@ export function Player({
     };
 
     const handlePointerDown = (e: MouseEvent) => {
+      if (!(e.target instanceof HTMLCanvasElement)) return;
       if (e.button === 0) {
         triggerAttack();
       }
     };
 
+    const clearKeys = () => {
+      keys.current = {};
+    };
+    window.addEventListener("blur", clearKeys);
     window.addEventListener("keydown", down);
     window.addEventListener("keyup", up);
     window.addEventListener("pointerdown", handlePointerDown);
     return () => {
+      window.removeEventListener("blur", clearKeys);
       window.removeEventListener("keydown", down);
       window.removeEventListener("keyup", up);
       window.removeEventListener("pointerdown", handlePointerDown);
@@ -120,24 +127,16 @@ export function Player({
     if (!g) return;
 
     const k = keys.current;
-    const fwd =
-      (k["KeyW"] || k["ArrowUp"] ? 1 : 0) -
-      (k["KeyS"] || k["ArrowDown"] ? 1 : 0);
-    const side =
-      (k["KeyD"] || k["ArrowRight"] ? 1 : 0) -
-      (k["KeyA"] || k["ArrowLeft"] ? 1 : 0);
+    const fwd = (k["KeyW"] || k["ArrowUp"] ? 1 : 0) - (k["KeyS"] || k["ArrowDown"] ? 1 : 0);
+    const side = (k["KeyD"] || k["ArrowRight"] ? 1 : 0) - (k["KeyA"] || k["ArrowLeft"] ? 1 : 0);
 
     const camDir = new THREE.Vector3();
     camera.getWorldDirection(camDir);
     camDir.y = 0;
     camDir.normalize();
-    const right = new THREE.Vector3()
-      .crossVectors(camDir, new THREE.Vector3(0, 1, 0))
-      .normalize();
+    const right = new THREE.Vector3().crossVectors(camDir, new THREE.Vector3(0, 1, 0)).normalize();
 
-    const wish = new THREE.Vector3()
-      .addScaledVector(camDir, fwd)
-      .addScaledVector(right, side);
+    const wish = new THREE.Vector3().addScaledVector(camDir, fwd).addScaledVector(right, side);
     const moving = wish.lengthSq() > 0.0001;
     if (moving) wish.normalize();
 
@@ -169,22 +168,23 @@ export function Player({
     // Comprobación y resolución de colisiones sólidas con el entorno y barricadas
     const nextX = g.position.x + vel.current.x * dt;
     const nextZ = g.position.z + vel.current.z * dt;
-    const [resolvedX, resolvedZ] = resolveCollisions(
-      nextX,
-      nextZ,
+    const [resolvedX, resolvedZ] = moveWithCollisions(
+      g.position.x,
+      g.position.z,
+      nextX - g.position.x,
+      nextZ - g.position.z,
       0.45,
       defenses,
       shelterLevel,
+      obstacles,
     );
 
     g.position.x = resolvedX;
     g.position.z = resolvedZ;
 
     // Altura del terreno
-    const onDock = Math.abs(g.position.x) < 2.1 && g.position.z < -0.6;
-    const targetY = onDock
-      ? 0.48
-      : Math.max(heightAt(g.position.x, g.position.z), 0);
+    const onDock = biome === "coast" && Math.abs(g.position.x) < 2.1 && g.position.z < -0.6;
+    const targetY = onDock ? 0.48 : Math.max(heightAt(g.position.x, g.position.z), 0);
     g.position.y += (targetY - g.position.y) * Math.min(1, 10 * dt);
 
     const speed = Math.hypot(vel.current.x, vel.current.z);
@@ -234,7 +234,9 @@ export function Player({
       <mesh
         rotation-x={-Math.PI / 2}
         position={[0, 0.03, 0]}
-        material={new THREE.MeshBasicMaterial({ color: "#000000", transparent: true, opacity: 0.35 })}
+        material={
+          new THREE.MeshBasicMaterial({ color: "#000000", transparent: true, opacity: 0.35 })
+        }
       >
         <circleGeometry args={[0.38, 16]} />
       </mesh>
@@ -278,17 +280,9 @@ export function Player({
           <capsuleGeometry args={[0.065, 0.4, 4, 6]} />
         </mesh>
         {/* Katana de combate */}
-        <mesh
-          position={[0, -0.38, 0.35]}
-          rotation-x={Math.PI / 2}
-          castShadow
-        >
+        <mesh position={[0, -0.38, 0.35]} rotation-x={Math.PI / 2} castShadow>
           <boxGeometry args={[0.04, 0.85, 0.015]} />
-          <meshStandardMaterial
-            color="#e2e8f0"
-            metalness={0.9}
-            roughness={0.2}
-          />
+          <meshStandardMaterial color="#e2e8f0" metalness={0.9} roughness={0.2} />
         </mesh>
         {/* Tsuba (guarda de la espada) */}
         <mesh position={[0, -0.38, 0.0]}>

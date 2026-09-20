@@ -2,6 +2,7 @@
 import type { PlacedDefense } from "@/components/scene/Defenses";
 
 interface DynamicMapModalProps {
+  scenery?: import("@/lib/game/landscape").SceneryObject[];
   onClose: () => void;
   playerPos: { x: number; z: number; angle: number };
   partner: PartnerState | null;
@@ -15,6 +16,7 @@ export function DynamicMapModal({
   partner,
   shelterLevel,
   defenses,
+  scenery = [],
 }: DynamicMapModalProps) {
   // Conversión de coordenadas de mundo 3D [-60, 60] a porcentaje [0, 100]%
   const toMapPercent = (x: number, z: number) => {
@@ -23,7 +25,7 @@ export function DynamicMapModal({
     return { left: `${px}%`, top: `${pz}%` };
   };
 
-  const dangerZones = [
+  const legacyZones = [
     {
       id: "nido_zombis",
       name: "Nido de Merodeadores",
@@ -56,6 +58,26 @@ export function DynamicMapModal({
     },
   ];
 
+  const labels = {
+    tower: "Edificio",
+    house: "Casa",
+    rock: "Formación rocosa",
+    tree: "Arboleda",
+    field: "Campo",
+  };
+  const dangerZones = scenery
+    .filter((o) => o.kind !== "tree")
+    .slice(0, 12)
+    .map((o, i) => ({
+      id: String(i),
+      name: labels[o.kind],
+      x: o.x,
+      z: o.z,
+      radiusPercent: 5,
+      danger: "TERRENO",
+      color: "border-amber-500 bg-amber-600/20",
+      desc: "Elemento del escenario actual; no indica posición de enemigos.",
+    }));
   return (
     <div className="pointer-events-auto self-center max-w-2xl w-full rounded-lg border border-amber-900/60 bg-[#161311]/95 p-6 shadow-2xl backdrop-blur animate-in fade-in zoom-in-95 duration-150 text-[#e6dcc6]">
       {/* Cabecera estilo pergamino japonés */}
@@ -109,9 +131,7 @@ export function DynamicMapModal({
                 <span className="text-xs font-extrabold text-red-400 tracking-wider">
                   ⚠️ {zone.name}
                 </span>
-                <p className="text-[9px] text-red-200/80 font-medium">
-                  {zone.danger}
-                </p>
+                <p className="text-[9px] text-red-200/80 font-medium">{zone.danger}</p>
               </div>
             </div>
           );
@@ -169,20 +189,21 @@ export function DynamicMapModal({
         })}
 
         {/* MARCADOR DEL COMPAÑERO CO-OP (SI ESTÁ CONECTADO) */}
-        {partner && (() => {
-          const partPos = toMapPercent(partner.x, partner.z);
-          return (
-            <div
-              className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-20"
-              style={partPos}
-            >
-              <div className="h-3 w-3 rounded-full bg-sky-400 border-2 border-white animate-ping" />
-              <span className="text-[9px] font-bold text-sky-300 bg-black/70 px-1 rounded mt-0.5 whitespace-nowrap">
-                👤 {partner.name}
-              </span>
-            </div>
-          );
-        })()}
+        {partner &&
+          (() => {
+            const partPos = toMapPercent(partner.x, partner.z);
+            return (
+              <div
+                className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-20"
+                style={partPos}
+              >
+                <div className="h-3 w-3 rounded-full bg-sky-400 border-2 border-white animate-ping" />
+                <span className="text-[9px] font-bold text-sky-300 bg-black/70 px-1 rounded mt-0.5 whitespace-nowrap">
+                  👤 {partner.name}
+                </span>
+              </div>
+            );
+          })()}
 
         {/* MARCADOR DEL JUGADOR PRINCIPAL */}
         {(() => {

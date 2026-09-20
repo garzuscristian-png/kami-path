@@ -1,6 +1,10 @@
 ﻿import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Canvas } from "@react-three/fiber";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { createLandscape } from "@/lib/game/landscape";
+import { WorldContext } from "@/components/scene/WorldContext";
+import { FarmPanel, FarmPlots, useFarm } from "@/components/game/Farm";
+import { resolveCollisions } from "@/components/scene/WorldCollisions";
 import { KagoshimaScene } from "@/components/scene/KagoshimaScene";
 import type { LootKind } from "@/components/scene/Loot";
 import type { PlacedDefense } from "@/components/scene/Defenses";
@@ -8,11 +12,7 @@ import { InventoryModal } from "@/components/game/InventoryModal";
 import { DynamicMapModal } from "@/components/game/DynamicMapModal";
 import { CoopModal } from "@/components/game/CoopModal";
 import { coop, type PartnerState, type CoopPing } from "@/lib/game/coop";
-import {
-  useProgress,
-  getObjectiveValue,
-  isNodeCompleted,
-} from "@/lib/game/progress";
+import { useProgress, getObjectiveValue, isNodeCompleted } from "@/lib/game/progress";
 import { sound } from "@/lib/game/audio";
 import {
   CRAFT_RECIPES,
@@ -44,8 +44,7 @@ export const Route = createFileRoute("/escenario")({
 function ScenarioPage() {
   const search = Route.useSearch();
   const activeNodeId = search.nodeId ?? "kyushu-kagoshima";
-  const activeNode =
-    NODES_BY_ID[activeNodeId] ?? NODES_BY_ID["kyushu-kagoshima"]!;
+  const activeNode = NODES_BY_ID[activeNodeId] ?? NODES_BY_ID["kyushu-kagoshima"]!;
 
   const { state, advanceObjective } = useProgress();
   const navigate = useNavigate();
@@ -75,6 +74,32 @@ function ScenarioPage() {
   const [showInventory, setShowInventory] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [showCoopModal, setShowCoopModal] = useState(false);
+  const paused =
+    health <= 0 || showCrafting || showShelterModal || showInventory || showMap || showCoopModal;
+  const world = useMemo(
+    () => createLandscape(activeNode.biome, activeNode.seed),
+    [activeNode.biome, activeNode.seed],
+  );
+  const farm = useFarm(paused);
+  const [homeLoaded, setHomeLoaded] = useState(false);
+  useEffect(() => {
+    try {
+      const saved = Number(localStorage.getItem("kami-home-level-v1"));
+      if (Number.isInteger(saved) && saved >= 0 && saved <= 3) setShelterLevel(saved);
+    } catch {
+      /* Continue playing when storage is unavailable. */
+    }
+    setHomeLoaded(true);
+  }, []);
+  useEffect(() => {
+    if (homeLoaded) {
+      try {
+        localStorage.setItem("kami-home-level-v1", String(shelterLevel));
+      } catch {
+        /* Browser storage may be unavailable. */
+      }
+    }
+  }, [homeLoaded, shelterLevel]);
 
   // Defensas y Trampas
   const [defensesStock, setDefensesStock] = useState({
@@ -133,6 +158,7 @@ function ScenarioPage() {
 
   // Temporizador automático del ciclo día/noche
   useEffect(() => {
+    if (paused) return;
     const timer = window.setInterval(() => {
       setCycleSeconds((prev) => {
         if (prev <= 1) {
@@ -157,7 +183,7 @@ function ScenarioPage() {
     }, 1000);
 
     return () => window.clearInterval(timer);
-  }, [isNight]);
+  }, [isNight, paused]);
 
   // Detección de santuario seguro (zona de nuestra casa en [0, 3])
   const distToHome = Math.hypot(playerPos.x - 0, playerPos.z - 3);
@@ -165,7 +191,7 @@ function ScenarioPage() {
 
   // Regeneración pasiva del refugio
   useEffect(() => {
-    if (!inSafeZone) return;
+    if (!inSafeZone || health <= 0) return;
 
     const regenTimer = window.setInterval(() => {
       if (shelterLevel >= 1) {
@@ -181,7 +207,7 @@ function ScenarioPage() {
     }, 1000);
 
     return () => window.clearInterval(regenTimer);
-  }, [inSafeZone, shelterLevel]);
+  }, [inSafeZone, shelterLevel, health]);
   const onLoot = useCallback(
     (kind: LootKind) => {
       sound.playLoot();
@@ -216,9 +242,7 @@ function ScenarioPage() {
         setCollected((c) => c + 1);
         setLoot((l) => ({ ...l, chatarra: l.chatarra + 1 }));
       }
-      const huntObj = activeNode.objectives.find(
-        (o) => o.kind === "hunt" || o.kind === "boss",
-      );
+      const huntObj = activeNode.objectives.find((o) => o.kind === "hunt" || o.kind === "boss");
       if (huntObj) {
         advanceObjective(activeNode.id, huntObj.id, 1);
       }
@@ -258,6 +282,9 @@ function ScenarioPage() {
       const forwardZ = Math.cos(playerPos.angle);
       const x = playerPos.x + forwardX * 2.2;
       const z = playerPos.z + forwardZ * 2.2;
+      const checked = resolveCollisions(x, z, 1.4, defenses, shelterLevel, world.obstacles);
+      if (Math.hypot(checked[0] - x, checked[1] - z) > 0.01 || world.height(x, z) < 0) return;
+      if (Math.hypot(x + 4.5, z - 6) < 5) return;
 
       setDefensesStock((s) => ({ ...s, [kind]: s[kind] - 1 }));
       setDefenses((prev) => [
@@ -273,25 +300,20 @@ function ScenarioPage() {
         },
       ]);
     },
-    [defensesStock, playerPos],
+    [defensesStock, playerPos, defenses, shelterLevel, world],
   );
 
   const handleTriggerTrap = useCallback((trapId: string) => {
-    setDefenses((prev) =>
-      prev.map((d) => (d.id === trapId ? { ...d, isSprung: true } : d)),
-    );
+    setDefenses((prev) => prev.map((d) => (d.id === trapId ? { ...d, isSprung: true } : d)));
   }, []);
 
   const canCraft = useCallback(
     (recipe: Recipe) => {
       if (recipe.cost.madera && collected < recipe.cost.madera) return false;
-      if (recipe.cost.chatarra && loot.chatarra < recipe.cost.chatarra)
-        return false;
-      if (recipe.cost.medicina && loot.medicina < recipe.cost.medicina)
-        return false;
+      if (recipe.cost.chatarra && loot.chatarra < recipe.cost.chatarra) return false;
+      if (recipe.cost.medicina && loot.medicina < recipe.cost.medicina) return false;
       if (recipe.cost.comida && loot.comida < recipe.cost.comida) return false;
-      if (recipe.cost.reliquia && loot.reliquia < recipe.cost.reliquia)
-        return false;
+      if (recipe.cost.reliquia && loot.reliquia < recipe.cost.reliquia) return false;
       if (recipe.id === "hoja_afilada" && hasSharpenedBlade) return false;
       if (recipe.id === "omamori" && hasOmamori) return false;
       return true;
@@ -336,13 +358,10 @@ function ScenarioPage() {
   const canUpgradeShelter = useCallback(
     (upgrade: ShelterUpgrade) => {
       if (upgrade.cost.madera && collected < upgrade.cost.madera) return false;
-      if (upgrade.cost.chatarra && loot.chatarra < upgrade.cost.chatarra)
-        return false;
+      if (upgrade.cost.chatarra && loot.chatarra < upgrade.cost.chatarra) return false;
       if (upgrade.cost.comida && loot.comida < upgrade.cost.comida) return false;
-      if (upgrade.cost.medicina && loot.medicina < upgrade.cost.medicina)
-        return false;
-      if (upgrade.cost.reliquia && loot.reliquia < upgrade.cost.reliquia)
-        return false;
+      if (upgrade.cost.medicina && loot.medicina < upgrade.cost.medicina) return false;
+      if (upgrade.cost.reliquia && loot.reliquia < upgrade.cost.reliquia) return false;
       return true;
     },
     [collected, loot],
@@ -350,7 +369,13 @@ function ScenarioPage() {
 
   const upgradeShelter = useCallback(
     (upgrade: ShelterUpgrade) => {
-      if (!canUpgradeShelter(upgrade)) return;
+      if (
+        !homeLoaded ||
+        !canUpgradeShelter(upgrade) ||
+        !inSafeZone ||
+        upgrade.level !== shelterLevel + 1
+      )
+        return;
       sound.playLoot();
 
       if (upgrade.cost.madera) {
@@ -366,7 +391,7 @@ function ScenarioPage() {
 
       setShelterLevel(upgrade.level);
     },
-    [canUpgradeShelter],
+    [homeLoaded, canUpgradeShelter, inSafeZone, shelterLevel],
   );
 
   const handlePlayerMove = useCallback(
@@ -426,31 +451,48 @@ function ScenarioPage() {
   return (
     <main className="fixed inset-0 bg-background select-none">
       <Canvas
+        frameloop={paused ? "never" : "always"}
         shadows
         dpr={[1, 2]}
         camera={{ position: [8, 6, 12], fov: 55, near: 0.1, far: 4000 }}
       >
         <Suspense fallback={null}>
-          <KagoshimaScene
-            biome={activeNode.biome}
-            danger={activeNode.danger}
-            seed={activeNode.seed}
-            isNight={isNight}
-            shelterLevel={shelterLevel}
-            defenses={defenses}
-            partner={partner}
-            onTriggerTrap={handleTriggerTrap}
-            onOpenShelterUpgrade={() => setShowShelterModal(true)}
-            onCollect={onCollect}
-            onHit={onHit}
-            onLoot={onLoot}
-            onKillZombie={onKillZombie}
-            onStaminaChange={setStamina}
-            onPlayerMove={handlePlayerMove}
-            damagePerHit={damagePerHit}
-          />
+          <WorldContext.Provider value={world}>
+            <FarmPlots farm={farm.farm} />
+            <KagoshimaScene
+              key={activeNode.id}
+              biome={activeNode.biome}
+              danger={activeNode.danger}
+              seed={activeNode.seed}
+              isNight={isNight}
+              shelterLevel={shelterLevel}
+              defenses={defenses}
+              partner={partner}
+              onTriggerTrap={handleTriggerTrap}
+              onOpenShelterUpgrade={() => setShowShelterModal(true)}
+              onCollect={onCollect}
+              onHit={onHit}
+              onLoot={onLoot}
+              onKillZombie={onKillZombie}
+              onStaminaChange={setStamina}
+              onPlayerMove={handlePlayerMove}
+              damagePerHit={damagePerHit}
+            />
+          </WorldContext.Provider>
         </Suspense>
       </Canvas>
+      {!paused && (
+        <FarmPanel
+          farm={farm.farm}
+          act={farm.act}
+          x={playerPos.x}
+          z={playerPos.z}
+          saveError={farm.saveError}
+          onEat={() => {
+            if (health < 100 && farm.act({ type: "eat" })) setHealth((h) => Math.min(100, h + 20));
+          }}
+        />
+      )}
 
       {/* Pings y Alertas */}
       {activePing && (
@@ -486,7 +528,8 @@ function ScenarioPage() {
                 </p>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className="text-[11px] font-bold text-amber-400">
-                    {"★".repeat(activeNode.danger)}{"☆".repeat(Math.max(0, 5 - activeNode.danger))}
+                    {"★".repeat(activeNode.danger)}
+                    {"☆".repeat(Math.max(0, 5 - activeNode.danger))}
                   </span>
                   <span className="text-[10px] text-muted-foreground font-medium">
                     (Peligro Nivel {activeNode.danger}/5)
@@ -606,6 +649,19 @@ function ScenarioPage() {
           <div className="flex items-start gap-3">
             <div className="pointer-events-auto">
               <Radar
+                points={[
+                  { name: "Casa", x: 6.5, z: 6, color: "#eab308" },
+                  { name: "Huerto", x: -6, z: 6, color: "#10b981" },
+                  ...world.objects
+                    .filter((o) => o.kind === "house" || o.kind === "tower")
+                    .slice(0, 8)
+                    .map((o, i) => ({
+                      name: `Edificio ${i + 1}`,
+                      x: o.x,
+                      z: o.z,
+                      color: "#94a3b8",
+                    })),
+                ]}
                 playerX={playerPos.x}
                 playerZ={playerPos.z}
                 playerAngle={playerPos.angle}
@@ -680,6 +736,7 @@ function ScenarioPage() {
         {/* MODAL: MAPA TÁCTICO */}
         {showMap && (
           <DynamicMapModal
+            scenery={world.objects}
             onClose={() => setShowMap(false)}
             playerPos={playerPos}
             partner={partner}
@@ -706,7 +763,8 @@ function ScenarioPage() {
                   🏯 Refugio de Supervivencia (Nivel {shelterLevel}/3)
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Construye y mejora tu campamento junto a la casa segura para obtener bendiciones y defensas.
+                  Construye y mejora tu campamento junto a la casa segura para obtener bendiciones y
+                  defensas.
                 </p>
               </div>
               <button
@@ -738,9 +796,7 @@ function ScenarioPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="flex items-center gap-2">
-                          <p className="font-semibold text-sm text-foreground">
-                            {upgrade.name}
-                          </p>
+                          <p className="font-semibold text-sm text-foreground">{upgrade.name}</p>
                           {isCurrent && (
                             <span className="rounded bg-sky-500/20 px-2 py-0.5 text-[10px] font-bold text-sky-300">
                               ACTUAL
@@ -752,9 +808,7 @@ function ScenarioPage() {
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {upgrade.description}
-                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">{upgrade.description}</p>
 
                         <div className="mt-2 space-y-1">
                           {upgrade.perks.map((perk, i) => (
@@ -769,9 +823,7 @@ function ScenarioPage() {
 
                         {isNext && (
                           <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
-                            <span className="text-muted-foreground">
-                              Requisitos:
-                            </span>
+                            <span className="text-muted-foreground">Requisitos:</span>
                             {upgrade.cost.madera && (
                               <span
                                 className={
@@ -846,20 +898,14 @@ function ScenarioPage() {
                     className="flex items-center justify-between gap-4 rounded-sm border border-border bg-secondary/30 p-3"
                   >
                     <div>
-                      <p className="font-medium text-sm text-foreground">
-                        {r.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {r.description}
-                      </p>
+                      <p className="font-medium text-sm text-foreground">{r.name}</p>
+                      <p className="text-xs text-muted-foreground">{r.description}</p>
                       <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
                         <span>Coste:</span>
                         {r.cost.madera && (
                           <span
                             className={
-                              collected >= r.cost.madera
-                                ? "text-emerald-400"
-                                : "text-destructive"
+                              collected >= r.cost.madera ? "text-emerald-400" : "text-destructive"
                             }
                           >
                             Madera: {r.cost.madera} ({collected})
@@ -896,7 +942,8 @@ function ScenarioPage() {
         {/* Barra Inferior de Atajos */}
         <div className="flex items-end justify-between">
           <p className="rounded-md border border-border bg-card/80 px-4 py-2 text-xs text-muted-foreground backdrop-blur">
-            WASD mover • Shift esprintar • <strong>Clic: Katana</strong> • I: Inventario • M: Mapa • P: Co-op • B: Plantar Defensa • Tab: Taller • R: Refugio • T: Día/Noche
+            WASD mover • Shift esprintar • <strong>Clic: Katana</strong> • I: Inventario • M: Mapa •
+            P: Co-op • B: Plantar Defensa • Tab: Taller • R: Refugio • T: Día/Noche
           </p>
           {done && (
             <div className="rounded-md border border-node-completed bg-card/90 px-5 py-4 backdrop-blur shadow-lg">
@@ -914,16 +961,12 @@ function ScenarioPage() {
         </div>
       </div>
 
-      {hurt && (
-        <div className="pointer-events-none absolute inset-0 z-[6] bg-destructive/25" />
-      )}
+      {hurt && <div className="pointer-events-none absolute inset-0 z-[6] bg-destructive/25" />}
 
       {health === 0 && (
         <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/80">
           <div className="rounded-md border border-border bg-card px-8 py-6 text-center">
-            <p className="text-xl font-semibold text-destructive">
-              Te han alcanzado
-            </p>
+            <p className="text-xl font-semibold text-destructive">Te han alcanzado</p>
             <p className="mt-2 text-sm text-muted-foreground">
               Los peligros de {activeNode.name} acabaron contigo.
             </p>

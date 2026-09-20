@@ -3,16 +3,12 @@ import { useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import type { PlayerHandle } from "./Player";
 import type { PlacedDefense } from "./Defenses";
-import { heightAt } from "./terrain";
+import { useWorld } from "./WorldContext";
+import { moveWithCollisions } from "./WorldCollisions";
 import { sound } from "@/lib/game/audio";
 
 export type ZombieArchetype =
-  | "normal"
-  | "volcanic_crawler"
-  | "armored_samurai"
-  | "frost_wendigo"
-  | "toxic_mutant"
-  | "boss";
+  "normal" | "volcanic_crawler" | "armored_samurai" | "frost_wendigo" | "toxic_mutant" | "boss";
 
 export interface ZombieSpawn {
   id: number;
@@ -48,6 +44,7 @@ export function Zombie({
   onCatch,
   onKill,
 }: ZombieProps) {
+  const { height: heightAt, obstacles } = useWorld();
   const archetype = spawn.archetype || "normal";
   const isBoss = archetype === "boss";
   const isArmored = archetype === "armored_samurai";
@@ -138,6 +135,8 @@ export function Zombie({
     }
 
     const dx = player.position.x - g.position.x;
+    const previousX = g.position.x,
+      previousZ = g.position.z;
     const dz = player.position.z - g.position.z;
     const dist = Math.hypot(dx, dz);
 
@@ -253,6 +252,17 @@ export function Zombie({
       g.position.x += awayX * moveSpeed * dt;
       g.position.z += awayZ * moveSpeed * dt;
     }
+
+    [g.position.x, g.position.z] = moveWithCollisions(
+      previousX,
+      previousZ,
+      g.position.x - previousX,
+      g.position.z - previousZ,
+      isBoss ? 0.7 : 0.4,
+      defenses,
+      0,
+      obstacles,
+    );
 
     // Golpe al jugador
     cooldown.current -= dt;

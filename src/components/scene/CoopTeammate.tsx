@@ -2,13 +2,14 @@
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { PartnerState } from "@/lib/game/coop";
-import { heightAt } from "./terrain";
+import { useWorld } from "./WorldContext";
 
 interface CoopTeammateProps {
   partner: PartnerState | null;
 }
 
 export function CoopTeammate({ partner }: CoopTeammateProps) {
+  const { height: heightAt } = useWorld();
   const group = useRef<THREE.Group>(null);
   const legL = useRef<THREE.Mesh>(null);
   const legR = useRef<THREE.Mesh>(null);
@@ -119,18 +120,9 @@ export function CoopTeammate({ partner }: CoopTeammateProps) {
           <meshStandardMaterial color="#0284c7" />
         </mesh>
         {/* Katana */}
-        <mesh
-          ref={swordRef}
-          position={[0, -0.38, 0.35]}
-          rotation-x={Math.PI / 2}
-          castShadow
-        >
+        <mesh ref={swordRef} position={[0, -0.38, 0.35]} rotation-x={Math.PI / 2} castShadow>
           <boxGeometry args={[0.04, 0.85, 0.015]} />
-          <meshStandardMaterial
-            color="#e2e8f0"
-            metalness={0.9}
-            roughness={0.2}
-          />
+          <meshStandardMaterial color="#e2e8f0" metalness={0.9} roughness={0.2} />
         </mesh>
       </group>
 
@@ -142,9 +134,7 @@ export function CoopTeammate({ partner }: CoopTeammateProps) {
           <meshBasicMaterial color="#0f172a" />
         </mesh>
         {/* Relleno de salud verde/celeste */}
-        <mesh
-          position={[-0.45 + (partner.health / 100) * 0.45, 0, 0.005]}
-        >
+        <mesh position={[-0.45 + (partner.health / 100) * 0.45, 0, 0.005]}>
           <planeGeometry args={[(partner.health / 100) * 0.88, 0.09]} />
           <meshBasicMaterial color="#38bdf8" />
         </mesh>

@@ -3,7 +3,8 @@ import { useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import type { PlayerHandle } from "./Player";
 import type { Biome } from "@/lib/game/nodes";
-import { heightAt } from "./terrain";
+import { useWorld } from "./WorldContext";
+import { isClear } from "./WorldCollisions";
 import { ZONES } from "./Village";
 
 function rng(seed: number) {
@@ -33,6 +34,7 @@ export interface LootSpawn {
 
 /** Reparte botín temático según la naturaleza y fauna del bioma activo. */
 export function useLootSpawns(biome: Biome = "coast", seed: number = 90210): LootSpawn[] {
+  const { height: heightAt, obstacles } = useWorld();
   return useMemo(() => {
     const r = rng(seed + 42);
     const out: LootSpawn[] = [];
@@ -46,7 +48,7 @@ export function useLootSpawns(biome: Biome = "coast", seed: number = 90210): Loo
         const x = zone.center[0] + Math.cos(a) * d;
         const z = zone.center[2] + Math.sin(a) * d;
         const y = heightAt(x, z);
-        if (y < 0.2) continue;
+        if (y < 0 || !isClear(x, z, 1, obstacles)) continue;
 
         const roll = r();
         let kind: LootKind = "chatarra";
@@ -119,7 +121,12 @@ export function useLootSpawns(biome: Biome = "coast", seed: number = 90210): Loo
             name = kind === "reliquia" ? "Concha Sagrada" : "Algas Medicinales";
           } else {
             kind = roll > 0.66 ? "comida" : roll > 0.33 ? "chatarra" : "medicina";
-            name = kind === "comida" ? "Pescado Seco" : kind === "chatarra" ? "Restos de Red" : "Medicina";
+            name =
+              kind === "comida"
+                ? "Pescado Seco"
+                : kind === "chatarra"
+                  ? "Restos de Red"
+                  : "Medicina";
           }
         }
 
@@ -145,7 +152,11 @@ export function LootItem({
   const done = useRef(false);
 
   const take = () => {
-    if (done.current) return;
+    if (
+      done.current ||
+      Math.hypot(player.position.x - spawn.pos[0], player.position.z - spawn.pos[2]) > 1.8
+    )
+      return;
     done.current = true;
     setTaken(true);
     document.body.style.cursor = "auto";
@@ -156,8 +167,7 @@ export function LootItem({
     const g = ref.current;
     if (!g || done.current) return;
     g.rotation.y += 0.012;
-    g.position.y =
-      spawn.pos[1] + Math.sin(state.clock.elapsedTime * 1.8 + spawn.id) * 0.07;
+    g.position.y = spawn.pos[1] + Math.sin(state.clock.elapsedTime * 1.8 + spawn.id) * 0.07;
     const dx = player.position.x - spawn.pos[0];
     const dz = player.position.z - spawn.pos[2];
     const d2 = dx * dx + dz * dz;
@@ -197,9 +207,7 @@ export function LootItem({
           roughness={0.4}
         />
       </mesh>
-      {near && (
-        <pointLight color={color} intensity={2.5} distance={3.5} position={[0, 0.2, 0]} />
-      )}
+      {near && <pointLight color={color} intensity={2.5} distance={3.5} position={[0, 0.2, 0]} />}
     </group>
   );
 }

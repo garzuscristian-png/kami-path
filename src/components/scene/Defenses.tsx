@@ -1,7 +1,7 @@
 ﻿import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { heightAt } from "./terrain";
+import { useWorld } from "./WorldContext";
 
 export interface PlacedDefense {
   id: string;
@@ -19,9 +19,8 @@ interface DefensesProps {
   onDestroyDefense?: (id: string) => void;
 }
 
-export function Defenses({
-  defenses,
-}: DefensesProps) {
+export function Defenses({ defenses }: DefensesProps) {
+  const { height: heightAt } = useWorld();
   return (
     <group>
       {defenses.map((d) => {
@@ -36,13 +35,7 @@ export function Defenses({
             />
           );
         }
-        return (
-          <SpikeTrapMesh
-            key={d.id}
-            position={[d.x, y, d.z]}
-            isSprung={!!d.isSprung}
-          />
-        );
+        return <SpikeTrapMesh key={d.id} position={[d.x, y, d.z]} isSprung={!!d.isSprung} />;
       })}
     </group>
   );
@@ -117,16 +110,9 @@ function SpikeTrapMesh({
         const row = Math.floor(i / 3) - 1;
         const col = (i % 3) - 1;
         return (
-          <mesh
-            key={i}
-            position={[col * 0.4, isSprung ? 0.45 : 0.12, row * 0.4]}
-            castShadow
-          >
+          <mesh key={i} position={[col * 0.4, isSprung ? 0.45 : 0.12, row * 0.4]} castShadow>
             <coneGeometry args={[0.045, isSprung ? 0.75 : 0.25, 5]} />
-            <meshStandardMaterial
-              color={isSprung ? "#b53a25" : "#84934e"}
-              roughness={0.7}
-            />
+            <meshStandardMaterial color={isSprung ? "#b53a25" : "#84934e"} roughness={0.7} />
           </mesh>
         );
       })}
